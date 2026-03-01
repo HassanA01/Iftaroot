@@ -1,6 +1,9 @@
 import { useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { motion } from "motion/react";
+import { Users, Copy, Check } from "lucide-react";
+import { LanternIcon, CrescentIcon } from "../components/icons";
 import { getSessionByCode, listSessionPlayers, startSession } from "../api/sessions";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useGameStore } from "../stores/gameStore";
@@ -14,11 +17,17 @@ interface WsPlayerEvent {
   name: string;
 }
 
+const PLAYER_COLORS = [
+  "#f5c842", "#ff6b35", "#4caf50", "#2196f3", "#f44336",
+  "#9c27b0", "#00bcd4", "#ff9800",
+];
+
 export function HostLobbyPage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const [wsReady, setWsReady] = useState(false);
   const [wsEvents, setWsEvents] = useState<WsPlayerEvent[]>([]);
+  const [copied, setCopied] = useState(false);
 
   const { data: session, isError } = useQuery({
     queryKey: ["session-by-code", code],
@@ -32,7 +41,6 @@ export function HostLobbyPage() {
     enabled: !!session?.id,
   });
 
-  // Derive player list from initial DB snapshot merged with live WS events.
   const players: GamePlayer[] = useMemo(() => {
     let result = [...(initialPlayers ?? [])];
     for (const ev of wsEvents) {
@@ -51,23 +59,17 @@ export function HostLobbyPage() {
     return result;
   }, [initialPlayers, wsEvents, session?.id]);
 
-  const handleMessage = useCallback(
-    (msg: WsMessage) => {
-      if (msg.type === "player_joined") {
-        const payload = msg.payload as { player_id: string; name: string };
-        setWsEvents((prev) => [
-          ...prev,
-          { type: "joined", player_id: payload.player_id, name: payload.name },
-        ]);
-      } else if (msg.type === "player_left") {
-        const payload = msg.payload as { player_id: string };
-        setWsEvents((prev) => [...prev, { type: "left", player_id: payload.player_id, name: "" }]);
-      } else if (msg.type === "game_started") {
-        navigate(`/admin/game/${code}`);
-      }
-    },
-    [code, navigate],
-  );
+  const handleMessage = useCallback((msg: WsMessage) => {
+    if (msg.type === "player_joined") {
+      const payload = msg.payload as { player_id: string; name: string };
+      setWsEvents((prev) => [...prev, { type: "joined", player_id: payload.player_id, name: payload.name }]);
+    } else if (msg.type === "player_left") {
+      const payload = msg.payload as { player_id: string };
+      setWsEvents((prev) => [...prev, { type: "left", player_id: payload.player_id, name: "" }]);
+    } else if (msg.type === "game_started") {
+      navigate(`/admin/game/${code}`);
+    }
+  }, [code, navigate]);
 
   useWebSocket({
     url: `${WS_BASE}/api/v1/ws/host/${code}`,
@@ -78,85 +80,134 @@ export function HostLobbyPage() {
   });
 
   const setActiveSession = useGameStore((s) => s.setActiveSession);
-
   const startMutation = useMutation({
     mutationFn: () => startSession(session!.id),
-    onSuccess: () => {
-      setActiveSession({ sessionId: session!.id, code: code! });
-    },
+    onSuccess: () => setActiveSession({ sessionId: session!.id, code: code! }),
   });
 
   const joinUrl = `${window.location.origin}/join?code=${code}`;
 
+  function handleCopyUrl() {
+    navigator.clipboard.writeText(joinUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
   if (isError) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-red-400">Session not found.</p>
+      <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
+        <div className="ramadan-pattern" />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <p style={{ color: "#f44336" }}>Session not found.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center px-4 py-12">
-      <div className="w-full max-w-2xl space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <p className="text-gray-400 text-sm uppercase tracking-widest mb-2">Room code</p>
-          <h1 className="text-7xl font-black tracking-widest text-indigo-400">{code}</h1>
-          <p className="text-gray-500 text-sm mt-2">
-            {wsReady ? (
-              <span className="text-green-400">● Connected</span>
-            ) : (
-              <span className="text-yellow-400">● Connecting…</span>
-            )}
-          </p>
+    <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
+      <div className="ramadan-pattern" />
+
+      <div className="relative z-10 min-h-screen flex flex-col items-center px-6 py-12 max-w-2xl mx-auto">
+        {/* Animated lanterns */}
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-32">
+          {[{ delay: 0 }, { delay: 0.5 }].map((l, i) => (
+            <motion.div key={i} animate={{ y: [0, -10, 0], rotate: [i === 0 ? -5 : 5, i === 0 ? 5 : -5, i === 0 ? -5 : 5] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: l.delay }}>
+              <LanternIcon className="w-10 h-10 drop-shadow-[0_0_15px_rgba(245,200,66,0.6)]" style={{ color: "#f5c842" }} />
+            </motion.div>
+          ))}
         </div>
 
-        {/* Join URL */}
-        <div className="bg-gray-900 rounded-xl p-5 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Join at</p>
-          <p className="text-indigo-300 font-mono text-sm break-all">{joinUrl}</p>
-        </div>
-
-        {/* Player list */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">
-              Players{" "}
-              <span className="text-gray-400 font-normal text-base">({players.length})</span>
-            </h2>
-          </div>
-
-          {players.length === 0 ? (
-            <div className="bg-gray-900 rounded-xl p-8 text-center text-gray-500">
-              <p>Waiting for players to join…</p>
+        <div className="w-full mt-16 space-y-6">
+          {/* Room code */}
+          <motion.div className="text-center" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <CrescentIcon className="w-6 h-6" style={{ color: "#f5c842" }} />
+              <p className="text-sm font-medium uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.6)" }}>Room Code</p>
             </div>
+            <h1 className="text-8xl font-black tracking-widest" style={{
+              color: "#f5c842",
+              textShadow: "0 0 30px rgba(245,200,66,0.6), 0 4px 20px rgba(0,0,0,0.5)",
+            }}>
+              {code}
+            </h1>
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <span className={`w-2 h-2 rounded-full ${wsReady ? "bg-green-400" : "bg-yellow-400"} animate-pulse`} />
+              <p className="text-sm" style={{ color: wsReady ? "#4caf50" : "#f5c842" }}>
+                {wsReady ? "Connected" : "Connecting…"}
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Join URL */}
+          <motion.div
+            className="p-4 rounded-2xl flex items-center gap-3"
+            style={{ background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.2)" }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+            <p className="font-mono text-sm flex-1 truncate" style={{ color: "rgba(255,255,255,0.7)" }}>{joinUrl}</p>
+            <motion.button onClick={handleCopyUrl} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              className="p-2 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: copied ? "rgba(76,175,80,0.2)" : "rgba(245,200,66,0.2)", color: copied ? "#4caf50" : "#f5c842" }}>
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </motion.button>
+          </motion.div>
+
+          {/* Player count */}
+          <motion.div className="flex items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+            <Users className="w-5 h-5" style={{ color: "#f5c842" }} />
+            <h2 className="text-lg font-bold text-white">
+              Players <span style={{ color: "#f5c842" }}>({players.length})</span>
+            </h2>
+          </motion.div>
+
+          {/* Player list */}
+          {players.length === 0 ? (
+            <motion.div className="rounded-2xl p-10 text-center"
+              style={{ background: "rgba(245,200,66,0.05)", border: "2px dashed rgba(245,200,66,0.2)" }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+              <p style={{ color: "rgba(255,255,255,0.5)" }}>Waiting for players to join…</p>
+            </motion.div>
           ) : (
-            <ul className="bg-gray-900 rounded-xl divide-y divide-gray-800">
-              {players.map((player) => (
-                <li key={player.id} className="px-5 py-3 flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold">
-                    {player.name[0].toUpperCase()}
-                  </span>
-                  <span className="font-medium">{player.name}</span>
-                </li>
+            <motion.div className="space-y-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+              {players.map((player, i) => (
+                <motion.div key={player.id}
+                  className="px-4 py-3 rounded-xl flex items-center gap-3"
+                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(245,200,66,0.15)" }}
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0"
+                    style={{ background: PLAYER_COLORS[i % PLAYER_COLORS.length] }}>
+                    {player.name[0]?.toUpperCase()}
+                  </div>
+                  <span className="font-medium text-white">{player.name}</span>
+                </motion.div>
               ))}
-            </ul>
+            </motion.div>
+          )}
+
+          {/* Start button */}
+          <motion.button
+            onClick={() => startMutation.mutate()}
+            disabled={players.length === 0 || startMutation.isPending}
+            className="w-full py-4 rounded-xl font-bold text-lg disabled:cursor-not-allowed"
+            style={{
+              background: players.length > 0 && !startMutation.isPending
+                ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
+                : "rgba(255,107,53,0.3)",
+              color: "white",
+              boxShadow: players.length > 0 ? "0 8px 30px rgba(255,107,53,0.4)" : "none",
+            }}
+            whileHover={players.length > 0 ? { scale: 1.02 } : {}}
+            whileTap={players.length > 0 ? { scale: 0.98 } : {}}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+            {startMutation.isPending ? "Starting…" : "Start Game 🚀"}
+          </motion.button>
+
+          {startMutation.isError && (
+            <p className="text-center text-sm" style={{ color: "#f44336" }}>Failed to start game. Try again.</p>
           )}
         </div>
-
-        {/* Start button */}
-        <button
-          onClick={() => startMutation.mutate()}
-          disabled={players.length === 0 || startMutation.isPending}
-          className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-lg py-4 rounded-xl transition"
-        >
-          {startMutation.isPending ? "Starting…" : "Start Game"}
-        </button>
-
-        {startMutation.isError && (
-          <p className="text-red-400 text-center text-sm">Failed to start game. Try again.</p>
-        )}
       </div>
     </div>
   );
