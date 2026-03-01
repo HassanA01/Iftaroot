@@ -82,7 +82,7 @@ export function SessionHistoryPage() {
                   <td className="py-3 pr-6">{statusBadge(s.status)}</td>
                   <td className="py-3">
                     {s.status === "waiting" && (
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-5">
                         <Link
                           to={`/admin/host/${s.code}`}
                           className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition"
