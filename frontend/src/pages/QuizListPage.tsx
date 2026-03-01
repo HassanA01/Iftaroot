@@ -1,11 +1,19 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { listQuizzes, deleteQuiz } from "../api/quizzes";
 import { createSession } from "../api/sessions";
+import { ConfirmModal } from "../components/ConfirmModal";
+
+interface PendingDelete {
+  id: string;
+  title: string;
+}
 
 export function QuizListPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const { data: quizzes = [], isLoading, isError } = useQuery({
     queryKey: ["quizzes"],
@@ -14,7 +22,10 @@ export function QuizListPage() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteQuiz,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quizzes"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] });
+      setPendingDelete(null);
+    },
   });
 
   const hostMutation = useMutation({
@@ -22,13 +33,30 @@ export function QuizListPage() {
     onSuccess: (data) => navigate(`/admin/host/${data.code}`),
   });
 
-  function handleDelete(id: string, title: string) {
-    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    deleteMutation.mutate(id);
+  function handleDeleteClick(id: string, title: string) {
+    setPendingDelete({ id, title });
+  }
+
+  function handleConfirmDelete() {
+    if (pendingDelete) {
+      deleteMutation.mutate(pendingDelete.id);
+    }
+  }
+
+  function handleCancelDelete() {
+    setPendingDelete(null);
   }
 
   return (
     <div>
+      {pendingDelete && (
+        <ConfirmModal
+          title={`Delete "${pendingDelete.title}"?`}
+          message="This cannot be undone."
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+      )}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold">Quizzes</h2>
         <Link
@@ -81,7 +109,7 @@ export function QuizListPage() {
                   Edit
                 </Link>
                 <button
-                  onClick={() => handleDelete(quiz.id, quiz.title)}
+                  onClick={() => handleDeleteClick(quiz.id, quiz.title)}
                   disabled={deleteMutation.isPending}
                   className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50 transition"
                 >
