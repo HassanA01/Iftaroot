@@ -44,6 +44,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 			r.Delete("/quizzes/{quizID}", h.DeleteQuiz)
 
 			// Game session management
+			r.Get("/sessions", h.ListSessions)
 			r.Post("/sessions", h.CreateSession)
 			r.Get("/sessions/{sessionID}", h.GetSession)
 			r.Delete("/sessions/{sessionID}", h.EndSession)

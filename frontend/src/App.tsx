@@ -9,6 +9,7 @@ import { QuizListPage } from "./pages/QuizListPage";
 import { QuizFormPage } from "./pages/QuizFormPage";
 import { HostLobbyPage } from "./pages/HostLobbyPage";
 import { HostGamePage } from "./pages/HostGamePage";
+import { SessionHistoryPage } from "./pages/SessionHistoryPage";
 import { JoinPage } from "./pages/JoinPage";
 import { PlayerLobbyPage } from "./pages/PlayerLobbyPage";
 import { PlayerGamePage } from "./pages/PlayerGamePage";
@@ -44,6 +45,7 @@ function App() {
             <Route path="quizzes" element={<QuizListPage />} />
             <Route path="quizzes/new" element={<QuizFormPage />} />
             <Route path="quizzes/:quizID/edit" element={<QuizFormPage />} />
+            <Route path="history" element={<SessionHistoryPage />} />
             <Route path="host/:code" element={<HostLobbyPage />} />
             <Route path="game/:code" element={<HostGamePage />} />
           </Route>

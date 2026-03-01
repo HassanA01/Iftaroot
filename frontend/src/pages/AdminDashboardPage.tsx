@@ -41,6 +41,14 @@ export function AdminDashboardPage() {
             >
               Quizzes
             </NavLink>
+            <NavLink
+              to="/admin/history"
+              className={({ isActive }) =>
+                `text-sm transition ${isActive ? "text-white font-medium" : "text-gray-400 hover:text-white"}`
+              }
+            >
+              History
+            </NavLink>
           </nav>
         </div>
         <div className="flex items-center gap-4">

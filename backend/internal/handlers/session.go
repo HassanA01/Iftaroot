@@ -20,6 +20,46 @@ import (
 	"github.com/HassanA01/Iftaroot/backend/internal/models"
 )
 
+func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
+	adminID := appMiddleware.GetAdminID(r.Context())
+	quizID := r.URL.Query().Get("quiz_id")
+
+	query := `
+		SELECT gs.id, gs.quiz_id, q.title, gs.code, gs.status,
+		       COUNT(gp.id) AS player_count,
+		       gs.started_at, gs.ended_at, gs.created_at
+		FROM game_sessions gs
+		JOIN quizzes q ON q.id = gs.quiz_id
+		LEFT JOIN game_players gp ON gp.session_id = gs.id
+		WHERE q.admin_id = $1`
+	args := []any{adminID}
+
+	if quizID != "" {
+		query += ` AND gs.quiz_id = $2`
+		args = append(args, quizID)
+	}
+	query += ` GROUP BY gs.id, q.title ORDER BY gs.created_at DESC`
+
+	rows, err := h.db.Query(r.Context(), query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list sessions")
+		return
+	}
+	defer rows.Close()
+
+	sessions := make([]models.SessionSummary, 0)
+	for rows.Next() {
+		var s models.SessionSummary
+		if err := rows.Scan(&s.ID, &s.QuizID, &s.QuizTitle, &s.Code, &s.Status,
+			&s.PlayerCount, &s.StartedAt, &s.EndedAt, &s.CreatedAt); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to read sessions")
+			return
+		}
+		sessions = append(sessions, s)
+	}
+	writeJSON(w, http.StatusOK, sessions)
+}
+
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	adminID := appMiddleware.GetAdminID(r.Context())
 
