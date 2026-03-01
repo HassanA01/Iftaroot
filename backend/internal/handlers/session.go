@@ -300,6 +300,84 @@ func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, session)
 }
 
+func (h *Handler) GetPlayerResults(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "sessionID")
+	playerID := chi.URLParam(r, "playerID")
+
+	// Validate IDs are valid UUIDs
+	if _, err := uuid.Parse(sessionID); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid session ID")
+		return
+	}
+	if _, err := uuid.Parse(playerID); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid player ID")
+		return
+	}
+
+	// Fetch player name and score
+	var results models.PlayerResults
+	err := h.db.QueryRow(r.Context(),
+		`SELECT id, name, score FROM game_players WHERE id = $1 AND session_id = $2`,
+		playerID, sessionID,
+	).Scan(&results.PlayerID, &results.Name, &results.Score)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "player not found")
+		return
+	}
+
+	// Calculate rank: number of players with a higher score + 1
+	err = h.db.QueryRow(r.Context(),
+		`SELECT COUNT(*) + 1 FROM game_players WHERE session_id = $1 AND score > $2`,
+		sessionID, results.Score,
+	).Scan(&results.Rank)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to compute rank")
+		return
+	}
+
+	// Fetch per-question breakdown
+	rows, err := h.db.Query(r.Context(), `
+		SELECT
+			q.id,
+			q.text,
+			q.order,
+			ga.option_id,
+			sel.text,
+			ga.is_correct,
+			ga.points,
+			corr.id,
+			corr.text
+		FROM game_answers ga
+		JOIN questions q ON q.id = ga.question_id
+		JOIN options sel ON sel.id = ga.option_id
+		JOIN options corr ON corr.question_id = q.id AND corr.is_correct = TRUE
+		WHERE ga.session_id = $1 AND ga.player_id = $2
+		ORDER BY q.order ASC
+	`, sessionID, playerID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to fetch results")
+		return
+	}
+	defer rows.Close()
+
+	results.Questions = make([]models.PlayerResultQuestion, 0)
+	for rows.Next() {
+		var q models.PlayerResultQuestion
+		if err := rows.Scan(
+			&q.QuestionID, &q.QuestionText, &q.QuestionOrder,
+			&q.SelectedOptionID, &q.SelectedOptionText,
+			&q.IsCorrect, &q.Points,
+			&q.CorrectOptionID, &q.CorrectOptionText,
+		); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to read results")
+			return
+		}
+		results.Questions = append(results.Questions, q)
+	}
+
+	writeJSON(w, http.StatusOK, results)
+}
+
 func generateCode() (string, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(1_000_000))
 	if err != nil {

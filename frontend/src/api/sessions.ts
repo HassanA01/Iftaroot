@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { GameSession, GamePlayer, SessionSummary } from "../types";
+import type { GameSession, GamePlayer, SessionSummary, PlayerResults } from "../types";
 
 export async function createSession(quizId: string): Promise<{ session_id: string; code: string }> {
   const { data } = await apiClient.post<{ session_id: string; code: string }>("/sessions", {
@@ -47,5 +47,12 @@ export async function joinSession(code: string, name: string): Promise<JoinSessi
 export async function listSessions(quizId?: string): Promise<SessionSummary[]> {
   const params = quizId ? { quiz_id: quizId } : undefined;
   const { data } = await apiClient.get<SessionSummary[]>("/sessions", { params });
+  return data;
+}
+
+export async function getPlayerResults(sessionId: string, playerId: string): Promise<PlayerResults> {
+  const { data } = await apiClient.get<PlayerResults>(
+    `/sessions/${sessionId}/players/${playerId}/results`
+  );
   return data;
 }

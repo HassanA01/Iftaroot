@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { PodiumEntry } from "../types";
+import type { PodiumEntry, PlayerResults } from "../types";
 
 interface Props {
   entries: PodiumEntry[];
@@ -9,6 +9,8 @@ interface Props {
   onEnd?: () => void;
   /** Label for the primary action button. */
   endLabel?: string;
+  /** Personal question-by-question results for the current player. */
+  playerResults?: PlayerResults | null;
 }
 
 // Deterministic confetti piece config so SSR/test renders are stable.
@@ -65,7 +67,7 @@ const PODIUM_COLORS = [
 const MEDALS = ["🥇", "🥈", "🥉"];
 const RANK_LABELS = ["2nd", "1st", "3rd"];
 
-export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Dashboard" }: Props) {
+export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Dashboard", playerResults }: Props) {
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
   const confetti = useMemo(() => generateConfetti(80), []);
@@ -156,6 +158,51 @@ export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Das
             </div>
           );
         })()}
+
+        {/* Personal question breakdown (player view only) */}
+        {playerResults && playerResults.questions.length > 0 && (
+          <div className="w-full" data-testid="player-results-breakdown">
+            <h2 className="text-lg font-bold mb-3 text-center">Your Performance</h2>
+            <div className="space-y-2">
+              {playerResults.questions.map((q, i) => (
+                <div
+                  key={q.question_id}
+                  className={`rounded-xl px-4 py-3 flex items-start gap-3 ${
+                    q.is_correct
+                      ? "bg-green-900/30 border border-green-700"
+                      : "bg-red-900/30 border border-red-800"
+                  }`}
+                >
+                  <span className="text-xl mt-0.5 flex-shrink-0">
+                    {q.is_correct ? "✓" : "✗"}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold leading-snug">
+                      {i + 1}. {q.question_text}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Your answer:{" "}
+                      <span className={q.is_correct ? "text-green-300" : "text-red-300"}>
+                        {q.selected_option_text}
+                      </span>
+                    </p>
+                    {!q.is_correct && (
+                      <p className="text-xs text-gray-400">
+                        Correct:{" "}
+                        <span className="text-green-300">{q.correct_option_text}</span>
+                      </p>
+                    )}
+                  </div>
+                  {q.is_correct && (
+                    <span className="text-green-400 font-black tabular-nums text-sm flex-shrink-0">
+                      +{q.points}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Remaining players (4th+) */}
         {rest.length > 0 && (
