@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { LeaderboardDisplay } from "../components/LeaderboardDisplay";
 import { PodiumScreen } from "../components/PodiumScreen";
+import { getPlayerResults } from "../api/sessions";
 import type { WsMessage, QuestionPayload, LeaderboardEntry, PodiumEntry } from "../types";
 
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:8081";
@@ -84,6 +86,7 @@ function CountdownRing({
 export function PlayerGamePage() {
   const { code } = useParams<{ code: string }>();
   const playerId = sessionStorage.getItem("player_id") ?? "";
+  const sessionId = sessionStorage.getItem("session_id") ?? "";
 
   const [phase, setPhase] = useState<GamePhase>("waiting");
   const [currentQuestion, setCurrentQuestion] = useState<QuestionPayload | null>(null);
@@ -94,6 +97,13 @@ export function PlayerGamePage() {
   const [prevLeaderboard, setPrevLeaderboard] = useState<LeaderboardEntry[]>([]);
   const leaderboardRef = useRef<LeaderboardEntry[]>([]);
   const [podium, setPodium] = useState<PodiumEntry[]>([]);
+
+  const { data: playerResults } = useQuery({
+    queryKey: ["playerResults", sessionId, playerId],
+    queryFn: () => getPlayerResults(sessionId, playerId),
+    enabled: phase === "podium" && !!sessionId && !!playerId,
+    staleTime: Infinity,
+  });
 
   const { send } = useWebSocket({
     url: `${WS_BASE}/api/v1/ws/player/${code}?player_id=${playerId}&name=${encodeURIComponent(
@@ -187,7 +197,7 @@ export function PlayerGamePage() {
 
   // Podium
   if (phase === "podium") {
-    return <PodiumScreen entries={podium} playerId={playerId} />;
+    return <PodiumScreen entries={podium} playerId={playerId} playerResults={playerResults} />;
   }
 
   // Leaderboard

@@ -101,3 +101,25 @@ type LeaderboardEntry struct {
 	Score    int       `json:"score"`
 	Rank     int       `json:"rank"`
 }
+
+// Player results (personal game summary)
+
+type PlayerResultQuestion struct {
+	QuestionID         uuid.UUID `json:"question_id"`
+	QuestionText       string    `json:"question_text"`
+	QuestionOrder      int       `json:"question_order"`
+	SelectedOptionID   uuid.UUID `json:"selected_option_id"`
+	SelectedOptionText string    `json:"selected_option_text"`
+	CorrectOptionID    uuid.UUID `json:"correct_option_id"`
+	CorrectOptionText  string    `json:"correct_option_text"`
+	IsCorrect          bool      `json:"is_correct"`
+	Points             int       `json:"points"`
+}
+
+type PlayerResults struct {
+	PlayerID  uuid.UUID              `json:"player_id"`
+	Name      string                 `json:"name"`
+	Score     int                    `json:"score"`
+	Rank      int                    `json:"rank"`
+	Questions []PlayerResultQuestion `json:"questions"`
+}

@@ -55,6 +55,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/sessions/join", h.JoinSession)
 		r.Get("/sessions/code/{code}", h.GetSessionByCode)
 		r.Get("/sessions/{sessionID}/players", h.ListSessionPlayers)
+		r.Get("/sessions/{sessionID}/players/{playerID}/results", h.GetPlayerResults)
 
 		// WebSocket endpoints
 		r.Get("/ws/host/{sessionCode}", h.HostWebSocket)

@@ -2,9 +2,17 @@ import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PlayerGamePage } from "../pages/PlayerGamePage";
+import * as sessionsApi from "../api/sessions";
+import type { PlayerResults } from "../types";
+
+vi.mock("../api/sessions", () => ({
+  getPlayerResults: vi.fn(),
+}));
 
 const PLAYER_ID = "player-123";
+const SESSION_ID = "session-456";
 const mockSend = vi.fn();
 let capturedOnMessage: ((msg: unknown) => void) | null = null;
 
@@ -18,18 +26,29 @@ vi.mock("../hooks/useWebSocket", () => ({
 beforeEach(() => {
   mockSend.mockClear();
   capturedOnMessage = null;
+  vi.mocked(sessionsApi.getPlayerResults).mockResolvedValue({
+    player_id: PLAYER_ID,
+    name: "Alice",
+    score: 2700,
+    rank: 1,
+    questions: [],
+  } as PlayerResults);
   // Simulate player identity in sessionStorage.
   sessionStorage.setItem("player_id", PLAYER_ID);
   sessionStorage.setItem("player_name", "Alice");
+  sessionStorage.setItem("session_id", SESSION_ID);
 });
 
 function renderPlayerGame(code = "123456") {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={[`/game/${code}/play`]}>
-      <Routes>
-        <Route path="/game/:code/play" element={<PlayerGamePage />} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={[`/game/${code}/play`]}>
+        <Routes>
+          <Route path="/game/:code/play" element={<PlayerGamePage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -172,5 +191,58 @@ describe("PlayerGamePage", () => {
     const link = screen.getByRole("link", { name: /join a new game/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute("href", "/join");
+  });
+
+  it("fetches player results when podium is shown", async () => {
+    const fakeResults: PlayerResults = {
+      player_id: PLAYER_ID,
+      name: "Alice",
+      score: 2700,
+      rank: 1,
+      questions: [
+        {
+          question_id: "q-1",
+          question_text: "What is 2+2?",
+          question_order: 1,
+          selected_option_id: "o-2",
+          selected_option_text: "4",
+          correct_option_id: "o-2",
+          correct_option_text: "4",
+          is_correct: true,
+          points: 900,
+        },
+        {
+          question_id: "q-2",
+          question_text: "Capital of France?",
+          question_order: 2,
+          selected_option_id: "o-3",
+          selected_option_text: "Berlin",
+          correct_option_id: "o-4",
+          correct_option_text: "Paris",
+          is_correct: false,
+          points: 0,
+        },
+      ],
+    };
+    vi.mocked(sessionsApi.getPlayerResults).mockResolvedValue(fakeResults);
+
+    renderPlayerGame();
+    act(() =>
+      capturedOnMessage!({
+        type: "podium",
+        payload: {
+          entries: [{ player_id: PLAYER_ID, name: "Alice", score: 2700, rank: 1 }],
+        },
+      }),
+    );
+
+    expect(sessionsApi.getPlayerResults).toHaveBeenCalledWith(SESSION_ID, PLAYER_ID);
+
+    // Wait for query to resolve and results to render
+    await screen.findByTestId("player-results-breakdown");
+    expect(screen.getByText(/What is 2\+2\?/)).toBeInTheDocument();
+    expect(screen.getByText(/Capital of France\?/)).toBeInTheDocument();
+    expect(screen.getByText("+900")).toBeInTheDocument();
+    expect(screen.getByText("Paris")).toBeInTheDocument();
   });
 });

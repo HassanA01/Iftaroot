@@ -115,3 +115,23 @@ export interface PodiumEntry {
   score: number;
   rank: number;
 }
+
+export interface PlayerResultQuestion {
+  question_id: string;
+  question_text: string;
+  question_order: number;
+  selected_option_id: string;
+  selected_option_text: string;
+  correct_option_id: string;
+  correct_option_text: string;
+  is_correct: boolean;
+  points: number;
+}
+
+export interface PlayerResults {
+  player_id: string;
+  name: string;
+  score: number;
+  rank: number;
+  questions: PlayerResultQuestion[];
+}
