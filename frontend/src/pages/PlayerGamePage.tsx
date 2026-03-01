@@ -1,21 +1,19 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useWebSocket } from "../hooks/useWebSocket";
+import { motion } from "motion/react";
+import { Check, X } from "lucide-react";
+import { CrescentIcon } from "../components/icons";
 import { LeaderboardDisplay } from "../components/LeaderboardDisplay";
 import { PodiumScreen } from "../components/PodiumScreen";
+import { useWebSocket } from "../hooks/useWebSocket";
 import { getPlayerResults } from "../api/sessions";
 import type { WsMessage, QuestionPayload, LeaderboardEntry, PodiumEntry } from "../types";
 
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:8081";
 
-const OPTION_COLORS = [
-  { bg: "bg-red-600", hover: "hover:bg-red-500", selected: "ring-4 ring-white" },
-  { bg: "bg-blue-600", hover: "hover:bg-blue-500", selected: "ring-4 ring-white" },
-  { bg: "bg-yellow-500", hover: "hover:bg-yellow-400", selected: "ring-4 ring-white" },
-  { bg: "bg-green-600", hover: "hover:bg-green-500", selected: "ring-4 ring-white" },
-];
-const OPTION_SHAPES = ["▲", "◆", "●", "■"];
+// Answer option colors matching the Figma design
+const OPTION_COLORS = ["#4caf50", "#2196f3", "#ff6b35", "#f44336"];
 
 interface RevealScore {
   is_correct: boolean;
@@ -30,13 +28,8 @@ interface AnswerRevealPayload {
 
 type GamePhase = "waiting" | "question" | "reveal" | "leaderboard" | "podium" | "ended";
 
-function CountdownRing({
-  timeLimit,
-  startedAt,
-}: {
-  timeLimit: number;
-  startedAt: number;
-}) {
+// ── Countdown ring (unchanged logic, Ramadan styling) ───────────────────────
+function CountdownRing({ timeLimit, startedAt }: { timeLimit: number; startedAt: number }) {
   const [remaining, setRemaining] = useState(timeLimit);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -46,39 +39,37 @@ function CountdownRing({
       const elapsed = (Date.now() - startedAt) / 1000;
       const left = Math.max(0, timeLimit - elapsed);
       setRemaining(left);
-      if (left <= 0 && intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (left <= 0 && intervalRef.current) clearInterval(intervalRef.current);
     }, 100);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [timeLimit, startedAt]);
 
-  const radius = 40;
+  const radius = 44;
   const circumference = 2 * Math.PI * radius;
   const progress = remaining / timeLimit;
   const strokeDashoffset = circumference * (1 - progress);
-  const color = remaining > timeLimit * 0.5 ? "#4ade80" : remaining > timeLimit * 0.25 ? "#facc15" : "#f87171";
+  const isUrgent = remaining <= timeLimit * 0.25;
+  const color = isUrgent ? "#f44336" : remaining > timeLimit * 0.5 ? "#f5c842" : "#ff6b35";
 
   return (
-    <div className="relative w-24 h-24 flex items-center justify-center">
+    <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
       <svg className="absolute inset-0 -rotate-90" width="96" height="96" viewBox="0 0 96 96">
-        <circle cx="48" cy="48" r={radius} fill="none" stroke="#374151" strokeWidth="8" />
-        <circle
-          cx="48"
-          cy="48"
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          style={{ transition: "stroke-dashoffset 0.1s linear, stroke 0.3s" }}
-        />
+        <circle cx="48" cy="48" r={radius} fill="none" stroke="rgba(245,200,66,0.2)" strokeWidth="8" />
+        <circle cx="48" cy="48" r={radius} fill="none" stroke={color} strokeWidth="8"
+          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+          style={{
+            transition: "stroke-dashoffset 0.1s linear, stroke 0.3s",
+            filter: `drop-shadow(0 0 ${isUrgent ? "15px" : "8px"} ${color}99)`,
+          }} />
       </svg>
-      <span className="text-2xl font-black tabular-nums">{Math.ceil(remaining)}</span>
+      <motion.span
+        className="text-2xl font-black tabular-nums"
+        style={{ color }}
+        animate={isUrgent ? { scale: [1, 1.1, 1] } : {}}
+        transition={{ duration: 0.5, repeat: isUrgent ? Infinity : 0 }}
+      >
+        {Math.ceil(remaining)}
+      </motion.span>
     </div>
   );
 }
@@ -109,243 +100,269 @@ export function PlayerGamePage() {
     url: `${WS_BASE}/api/v1/ws/player/${code}?player_id=${playerId}&name=${encodeURIComponent(
       sessionStorage.getItem("player_name") ?? "",
     )}`,
-    onMessage: useCallback(
-      (msg: WsMessage) => {
-        switch (msg.type) {
-          case "question": {
-            const p = msg.payload as QuestionPayload;
-            setCurrentQuestion(p);
-            setPhase("question");
-            setSelectedOptionId(null);
-            setRevealPayload(null);
-            setQuestionStartedAt(Date.now());
-            break;
-          }
-          case "answer_reveal": {
-            const p = msg.payload as AnswerRevealPayload;
-            setRevealPayload(p);
-            setPhase("reveal");
-            break;
-          }
-          case "leaderboard": {
-            const p = msg.payload as { entries: LeaderboardEntry[] };
-            setPrevLeaderboard(leaderboardRef.current);
-            leaderboardRef.current = p.entries;
-            setLeaderboard(p.entries);
-            setPhase("leaderboard");
-            break;
-          }
-          case "podium": {
-            const p = msg.payload as { entries: PodiumEntry[] };
-            setPodium(p.entries);
-            setPhase("podium");
-            break;
-          }
-          case "game_over": {
-            const p = msg.payload as { reason?: string };
-            if (p.reason === "session_ended") {
-              setPhase("ended");
-            }
-            break;
-          }
+    onMessage: useCallback((msg: WsMessage) => {
+      switch (msg.type) {
+        case "question": {
+          const p = msg.payload as QuestionPayload;
+          setCurrentQuestion(p);
+          setPhase("question");
+          setSelectedOptionId(null);
+          setRevealPayload(null);
+          setQuestionStartedAt(Date.now());
+          break;
         }
-      },
-      [],
-    ),
+        case "answer_reveal": {
+          const p = msg.payload as AnswerRevealPayload;
+          setRevealPayload(p);
+          setPhase("reveal");
+          break;
+        }
+        case "leaderboard": {
+          const p = msg.payload as { entries: LeaderboardEntry[] };
+          setPrevLeaderboard(leaderboardRef.current);
+          leaderboardRef.current = p.entries;
+          setLeaderboard(p.entries);
+          setPhase("leaderboard");
+          break;
+        }
+        case "podium": {
+          const p = msg.payload as { entries: PodiumEntry[] };
+          setPodium(p.entries);
+          setPhase("podium");
+          break;
+        }
+        case "game_over": {
+          const p = msg.payload as { reason?: string };
+          if (p.reason === "session_ended") setPhase("ended");
+          break;
+        }
+      }
+    }, []),
     enabled: !!code && !!playerId,
   });
 
   const handleSelectOption = (optionId: string, questionId: string) => {
-    if (selectedOptionId) return; // already answered
+    if (selectedOptionId) return;
     setSelectedOptionId(optionId);
-    send({
-      type: "answer_submitted",
-      payload: { question_id: questionId, option_id: optionId },
-    });
+    send({ type: "answer_submitted", payload: { question_id: questionId, option_id: optionId } });
   };
 
-  // Host ended the game early
+  // ── Ended ────────────────────────────────────────────────────────────────
   if (phase === "ended") {
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-4">
-        <div className="text-center space-y-4">
-          <div className="text-4xl">🚫</div>
-          <h1 className="text-2xl font-bold">Game Ended</h1>
-          <p className="text-gray-400">The host ended the session early.</p>
-          <a
-            href="/join"
-            className="inline-block mt-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-lg transition"
-          >
-            Join another game
-          </a>
+      <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
+        <div className="ramadan-pattern" />
+        <div className="relative z-10 min-h-screen flex items-center justify-center px-6">
+          <motion.div className="text-center w-full max-w-sm p-8 rounded-3xl"
+            style={{ background: "linear-gradient(135deg, rgba(42,20,66,0.9) 0%, rgba(30,15,50,0.95) 100%)", boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,200,66,0.2)" }}
+            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+            <div className="text-5xl mb-4">🚫</div>
+            <h1 className="text-2xl font-bold text-white mb-2">Game Ended</h1>
+            <p className="mb-6" style={{ color: "rgba(255,255,255,0.6)" }}>The host ended the session early.</p>
+            <motion.a href="/join" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              className="inline-block py-3 px-6 rounded-xl font-bold text-white"
+              style={{ background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)" }}>
+              Join another game
+            </motion.a>
+          </motion.div>
         </div>
       </div>
     );
   }
 
-  // Waiting screen
+  // ── Waiting ──────────────────────────────────────────────────────────────
   if (phase === "waiting") {
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-400">Get ready…</p>
+      <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
+        <div className="ramadan-pattern" />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <motion.div animate={{ y: [0, -15, 0], rotate: [-3, 3, -3] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}>
+              <CrescentIcon className="w-20 h-20 mx-auto drop-shadow-[0_0_30px_rgba(245,200,66,0.8)]" style={{ color: "#f5c842" }} />
+            </motion.div>
+            <div className="flex gap-3 justify-center mt-8">
+              {[0, 1, 2].map((i) => (
+                <motion.div key={i} className="w-3 h-3 rounded-full" style={{ background: "#f5c842" }}
+                  animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }} />
+              ))}
+            </div>
+            <p className="mt-4 font-medium" style={{ color: "rgba(255,255,255,0.7)" }}>Get ready…</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Podium
+  // ── Podium ───────────────────────────────────────────────────────────────
   if (phase === "podium") {
     return <PodiumScreen entries={podium} playerId={playerId} playerResults={playerResults} />;
   }
 
-  // Leaderboard
+  // ── Leaderboard ──────────────────────────────────────────────────────────
   if (phase === "leaderboard") {
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center px-4">
-        <div className="w-full max-w-sm space-y-5">
-          <h2 className="text-2xl font-bold text-center">Leaderboard</h2>
-          <LeaderboardDisplay entries={leaderboard} prevEntries={prevLeaderboard} highlightPlayerId={playerId} />
-          <p className="text-gray-600 text-sm text-center">Waiting for host…</p>
+      <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
+        <div className="ramadan-pattern" />
+        <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
+          <motion.div className="text-center mb-8" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <CrescentIcon className="w-8 h-8" style={{ color: "#f5c842" }} />
+              <h1 className="text-3xl font-black" style={{ color: "#f5c842" }}>Leaderboard</h1>
+            </div>
+            <p style={{ color: "rgba(255,255,255,0.7)" }}>Waiting for host…</p>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+            <LeaderboardDisplay entries={leaderboard} prevEntries={prevLeaderboard} highlightPlayerId={playerId} />
+          </motion.div>
         </div>
       </div>
     );
   }
 
-  // Reveal
+  // ── Reveal ───────────────────────────────────────────────────────────────
   if (phase === "reveal" && currentQuestion && revealPayload) {
     const myScore = revealPayload.scores[playerId];
     const isCorrect = myScore?.is_correct ?? false;
     const points = myScore?.points ?? 0;
+    const opts = currentQuestion.question.options;
 
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center px-4">
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <div
-            className={`rounded-2xl p-8 ${
-              isCorrect ? "bg-green-900/40 border border-green-600" : "bg-red-900/40 border border-red-700"
-            }`}
-          >
-            <div className="text-5xl mb-3">{isCorrect ? "✓" : "✗"}</div>
-            <p className="text-xl font-bold">{isCorrect ? "Correct!" : "Incorrect"}</p>
-            {isCorrect && (
-              <p className="text-3xl font-black text-green-400 mt-2">+{points}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            {currentQuestion.question.options.map((opt, i) => {
+      <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
+        <div className="ramadan-pattern" />
+        <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
+          {/* Answer tiles */}
+          <div className="grid grid-cols-1 gap-4 mb-6">
+            {opts.map((opt, i) => {
               const isCorrectOpt = opt.id === revealPayload.correct_option_id;
               const wasSelected = opt.id === selectedOptionId;
+              const color = OPTION_COLORS[i % 4];
               return (
-                <div
-                  key={opt.id}
-                  className={`rounded-xl px-4 py-3 flex items-center gap-3 text-left text-sm font-medium ${
-                    isCorrectOpt
-                      ? "bg-green-700"
-                      : wasSelected
-                      ? "bg-red-800 opacity-70"
-                      : "bg-gray-800 opacity-40"
-                  }`}
-                >
-                  <span className="opacity-60">{OPTION_SHAPES[i % 4]}</span>
-                  <span className="flex-1">{opt.text}</span>
-                  {isCorrectOpt && <span className="font-black">✓</span>}
-                </div>
+                <motion.div key={opt.id}
+                  className="relative p-5 rounded-2xl overflow-hidden"
+                  style={{
+                    background: isCorrectOpt ? `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)` : wasSelected ? "rgba(244,67,54,0.25)" : "rgba(255,255,255,0.08)",
+                    boxShadow: isCorrectOpt ? `0 8px 30px ${color}60, 0 0 0 3px ${color}` : "none",
+                    opacity: !isCorrectOpt && !wasSelected ? 0.4 : 1,
+                  }}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: !isCorrectOpt && !wasSelected ? 0.4 : 1, scale: isCorrectOpt ? [1, 1.03, 1] : 1 }}
+                  transition={{ delay: i * 0.08, scale: { duration: 0.5, repeat: isCorrectOpt ? 2 : 0 } }}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl flex-shrink-0"
+                      style={{ background: isCorrectOpt ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)", color: "white" }}>
+                      {String.fromCharCode(65 + i)}
+                    </div>
+                    <p className="text-white font-medium flex-1 leading-tight">{opt.text}</p>
+                    {isCorrectOpt && (
+                      <motion.div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ background: "rgba(255,255,255,0.3)" }}
+                        initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4, type: "spring", stiffness: 200 }}>
+                        <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                      </motion.div>
+                    )}
+                    {!isCorrectOpt && wasSelected && (
+                      <motion.div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-red-500/30"
+                        initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4, type: "spring", stiffness: 200 }}>
+                        <X className="w-6 h-6 text-red-400" strokeWidth={3} />
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
               );
             })}
           </div>
 
-          <p className="text-gray-500 text-sm">Leaderboard incoming…</p>
+          {/* Result feedback */}
+          <motion.div className="text-center mb-4"
+            initial={{ opacity: 0, y: 30, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 200 }}>
+            {isCorrect ? (
+              <motion.div className="inline-block px-8 py-4 rounded-2xl"
+                style={{ background: "linear-gradient(135deg, #f5c842 0%, #ffd700 100%)", boxShadow: "0 10px 40px rgba(245,200,66,0.6)" }}
+                animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 0.5, repeat: 2 }}>
+                <p className="font-black text-2xl" style={{ color: "#1a0a2e" }}>Correct!</p>
+                <p className="font-black text-4xl" style={{ color: "#1a0a2e" }}>+{points}</p>
+              </motion.div>
+            ) : (
+              <div className="inline-block px-8 py-4 rounded-2xl"
+                style={{ background: "rgba(244,67,54,0.2)", border: "2px solid rgba(244,67,54,0.4)" }}>
+                <p className="font-bold text-xl" style={{ color: "#f44336" }}>Incorrect</p>
+              </div>
+            )}
+          </motion.div>
+
+          <p className="text-center text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>Leaderboard incoming…</p>
         </div>
       </div>
     );
   }
 
-  // Question phase
+  // ── Question ─────────────────────────────────────────────────────────────
   if (phase === "question" && currentQuestion) {
+    const opts = currentQuestion.question.options;
+
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-        {/* Progress bar */}
-        <div className="h-1 bg-gray-800">
-          <div
-            className="h-full bg-indigo-500 transition-all"
-            style={{
-              width: `${((currentQuestion.question_index + 1) / currentQuestion.total_questions) * 100}%`,
-            }}
-          />
-        </div>
+      <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
+        <div className="ramadan-pattern" />
 
-        <div className="flex-1 flex flex-col items-center px-4 py-6 max-w-lg mx-auto w-full">
-          {/* Timer + question count */}
-          <div className="flex items-center justify-between w-full mb-4">
-            <span className="text-gray-400 text-sm">
-              {currentQuestion.question_index + 1} / {currentQuestion.total_questions}
-            </span>
-            <CountdownRing
-              timeLimit={currentQuestion.question.time_limit}
-              startedAt={questionStartedAt}
-            />
-            <div className="w-16" />
+        <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
+          {/* Timer */}
+          <motion.div className="flex justify-center mb-6" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}>
+            <CountdownRing timeLimit={currentQuestion.question.time_limit} startedAt={questionStartedAt} />
+          </motion.div>
+
+          {/* Question header */}
+          <motion.div className="mb-6 text-center px-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <CrescentIcon className="w-5 h-5" style={{ color: "#f5c842" }} />
+              <p className="text-sm font-medium" style={{ color: "#f5c842" }}>
+                Question {currentQuestion.question_index + 1} of {currentQuestion.total_questions}
+              </p>
+            </div>
+            <h2 className="text-xl font-bold text-white leading-snug">{currentQuestion.question.text}</h2>
+          </motion.div>
+
+          {/* Answer tiles — 1-column list matching Figma */}
+          <div className="grid grid-cols-1 gap-3 flex-1">
+            {opts.map((opt, i) => {
+              const color = OPTION_COLORS[i % 4];
+              const isSelected = selectedOptionId === opt.id;
+              const isLocked = !!selectedOptionId;
+              return (
+                <motion.button key={opt.id}
+                  onClick={() => handleSelectOption(opt.id, currentQuestion.question.id)}
+                  disabled={isLocked}
+                  className="relative p-4 rounded-2xl text-left overflow-hidden group disabled:cursor-not-allowed"
+                  style={{
+                    background: `linear-gradient(135deg, ${color}dd 0%, ${color}bb 100%)`,
+                    boxShadow: isSelected ? `0 8px 30px ${color}80, 0 0 0 3px ${color}` : `0 4px 15px ${color}40`,
+                    opacity: isLocked && !isSelected ? 0.5 : 1,
+                    transform: isSelected ? "scale(1.02)" : "scale(1)",
+                    transition: "transform 0.15s, opacity 0.15s",
+                  }}
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity: isLocked && !isSelected ? 0.5 : 1, x: 0 }}
+                  transition={{ delay: 0.2 + i * 0.08 }}
+                  whileHover={!isLocked ? { scale: 1.02 } : {}}
+                  whileTap={!isLocked ? { scale: 0.98 } : {}}>
+                  {/* Shine on hover */}
+                  <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20"
+                    initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.6 }} />
+                  <div className="relative z-10 flex items-center gap-4">
+                    <p className="text-white font-medium leading-tight">{opt.text}</p>
+                  </div>
+                </motion.button>
+              );
+            })}
           </div>
-
-          {/* Question text */}
-          <div className="w-full bg-gray-900 rounded-2xl p-6 text-center mb-6 flex-shrink-0">
-            <p className="text-lg font-bold leading-snug">
-              {currentQuestion.question.text}
-            </p>
-          </div>
-
-          {/* Options — pad to 4 when there are 3 so the 2×2 grid stays consistent */}
-          {(() => {
-            const opts = currentQuestion.question.options;
-            const gridItems: (typeof opts[0] | null)[] =
-              opts.length === 3 ? [...opts, null] : opts;
-            return (
-              <div className="w-full grid grid-cols-2 gap-3">
-                {gridItems.map((opt, i) => {
-                  if (!opt) {
-                    return (
-                      <div
-                        key="placeholder"
-                        className="h-[120px] rounded-xl"
-                        aria-hidden="true"
-                      />
-                    );
-                  }
-                  const colors = OPTION_COLORS[i % 4];
-                  const isSelected = selectedOptionId === opt.id;
-                  const isLocked = !!selectedOptionId;
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() =>
-                        handleSelectOption(opt.id, currentQuestion.question.id)
-                      }
-                      disabled={isLocked}
-                      className={`
-                        ${colors.bg} ${!isLocked ? colors.hover : ""}
-                        ${isSelected ? colors.selected : ""}
-                        ${isLocked && !isSelected ? "opacity-50" : ""}
-                        rounded-xl p-4 flex flex-col items-center justify-center gap-2
-                        text-white font-semibold text-sm text-center
-                        transition-all disabled:cursor-not-allowed h-[120px]
-                      `}
-                    >
-                      <span className="text-2xl font-black opacity-70">{OPTION_SHAPES[i % 4]}</span>
-                      <span>{opt.text}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
 
           {selectedOptionId && (
-            <div className="mt-4 text-center">
-              <p className="text-gray-400 text-sm">Answer locked in! Waiting for others…</p>
-            </div>
+            <motion.div className="mt-4 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>Answer locked in! Waiting for others…</p>
+            </motion.div>
           )}
         </div>
       </div>
