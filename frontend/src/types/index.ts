@@ -40,6 +40,18 @@ export interface GameSession {
   created_at: string;
 }
 
+export interface SessionSummary {
+  id: string;
+  quiz_id: string;
+  quiz_title: string;
+  code: string;
+  status: GameStatus;
+  player_count: number;
+  started_at?: string;
+  ended_at?: string;
+  created_at: string;
+}
+
 export interface GamePlayer {
   id: string;
   session_id: string;

@@ -20,6 +20,46 @@ import (
 	"github.com/HassanA01/Iftaroot/backend/internal/models"
 )
 
+func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
+	adminID := appMiddleware.GetAdminID(r.Context())
+	quizID := r.URL.Query().Get("quiz_id")
+
+	query := `
+		SELECT gs.id, gs.quiz_id, q.title, gs.code, gs.status,
+		       COUNT(gp.id) AS player_count,
+		       gs.started_at, gs.ended_at, gs.created_at
+		FROM game_sessions gs
+		JOIN quizzes q ON q.id = gs.quiz_id
+		LEFT JOIN game_players gp ON gp.session_id = gs.id
+		WHERE q.admin_id = $1`
+	args := []any{adminID}
+
+	if quizID != "" {
+		query += ` AND gs.quiz_id = $2`
+		args = append(args, quizID)
+	}
+	query += ` GROUP BY gs.id, q.title ORDER BY gs.created_at DESC`
+
+	rows, err := h.db.Query(r.Context(), query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list sessions")
+		return
+	}
+	defer rows.Close()
+
+	sessions := make([]models.SessionSummary, 0)
+	for rows.Next() {
+		var s models.SessionSummary
+		if err := rows.Scan(&s.ID, &s.QuizID, &s.QuizTitle, &s.Code, &s.Status,
+			&s.PlayerCount, &s.StartedAt, &s.EndedAt, &s.CreatedAt); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to read sessions")
+			return
+		}
+		sessions = append(sessions, s)
+	}
+	writeJSON(w, http.StatusOK, sessions)
+}
+
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	adminID := appMiddleware.GetAdminID(r.Context())
 
@@ -43,6 +83,23 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	).Scan(&exists)
 	if err != nil || !exists {
 		writeError(w, http.StatusNotFound, "quiz not found")
+		return
+	}
+
+	// If a waiting session already exists for this quiz, return it rather than
+	// creating a new orphan. This prevents zombie "waiting" rows accumulating.
+	var existingCode string
+	var existingID uuid.UUID
+	_ = h.db.QueryRow(r.Context(),
+		`SELECT id, code FROM game_sessions WHERE quiz_id = $1 AND status = $2 LIMIT 1`,
+		req.QuizID, models.GameStatusWaiting,
+	).Scan(&existingID, &existingCode)
+
+	if existingCode != "" {
+		writeJSON(w, http.StatusOK, map[string]string{
+			"session_id": existingID.String(),
+			"code":       existingCode,
+		})
 		return
 	}
 
@@ -85,15 +142,32 @@ func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) EndSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "sessionID")
-	now := time.Now()
 
-	// Fetch the session code so we can notify WebSocket clients.
+	// Fetch current status and code together.
 	var code string
-	_ = h.db.QueryRow(r.Context(),
-		`SELECT code FROM game_sessions WHERE id = $1`, sessionID,
-	).Scan(&code)
+	var status models.GameStatus
+	err := h.db.QueryRow(r.Context(),
+		`SELECT code, status FROM game_sessions WHERE id = $1`, sessionID,
+	).Scan(&code, &status)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "session not found")
+		return
+	}
 
-	_, err := h.db.Exec(r.Context(),
+	// Waiting sessions were never played — hard-delete them instead of leaving
+	// a finished ghost row in history.
+	if status == models.GameStatusWaiting {
+		_, err = h.db.Exec(r.Context(), `DELETE FROM game_sessions WHERE id = $1`, sessionID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to delete session")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	now := time.Now()
+	_, err = h.db.Exec(r.Context(),
 		`UPDATE game_sessions SET status = $1, ended_at = $2 WHERE id = $3`,
 		models.GameStatusFinished, now, sessionID,
 	)
@@ -103,9 +177,7 @@ func (h *Handler) EndSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Notify all WebSocket clients and clean up Redis.
-	if code != "" {
-		h.engine.EndGame(context.Background(), code)
-	}
+	h.engine.EndGame(context.Background(), code)
 
 	w.WriteHeader(http.StatusNoContent)
 }

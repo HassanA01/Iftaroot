@@ -44,16 +44,17 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 			r.Delete("/quizzes/{quizID}", h.DeleteQuiz)
 
 			// Game session management
+			r.Get("/sessions", h.ListSessions)
 			r.Post("/sessions", h.CreateSession)
 			r.Get("/sessions/{sessionID}", h.GetSession)
 			r.Delete("/sessions/{sessionID}", h.EndSession)
-			r.Get("/sessions/{sessionID}/players", h.ListSessionPlayers)
 			r.Post("/sessions/{sessionID}/start", h.StartSession)
 		})
 
-		// Player join (no auth)
+		// Player-facing (no auth)
 		r.Post("/sessions/join", h.JoinSession)
 		r.Get("/sessions/code/{code}", h.GetSessionByCode)
+		r.Get("/sessions/{sessionID}/players", h.ListSessionPlayers)
 
 		// WebSocket endpoints
 		r.Get("/ws/host/{sessionCode}", h.HostWebSocket)

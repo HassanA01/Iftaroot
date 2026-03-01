@@ -63,6 +63,13 @@ func TestJoinSession_Validation(t *testing.T) {
 	}
 }
 
+// TestListSessions_HandlerRegistered verifies ListSessions is defined on Handler
+// and has the correct signature. DB-hitting paths are covered by integration tests.
+func TestListSessions_HandlerRegistered(t *testing.T) {
+	h := newTestHandler()
+	var _ http.HandlerFunc = h.ListSessions
+}
+
 func TestGenerateCode(t *testing.T) {
 	codes := make(map[string]bool)
 	for i := 0; i < 100; i++ {

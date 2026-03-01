@@ -80,6 +80,19 @@ type GameAnswer struct {
 	Points     int       `json:"points" db:"points"`
 }
 
+// SessionSummary is returned by the list-sessions endpoint.
+type SessionSummary struct {
+	ID          uuid.UUID  `json:"id"`
+	QuizID      uuid.UUID  `json:"quiz_id"`
+	QuizTitle   string     `json:"quiz_title"`
+	Code        string     `json:"code"`
+	Status      GameStatus `json:"status"`
+	PlayerCount int        `json:"player_count"`
+	StartedAt   *time.Time `json:"started_at,omitempty"`
+	EndedAt     *time.Time `json:"ended_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
 // Leaderboard
 
 type LeaderboardEntry struct {
