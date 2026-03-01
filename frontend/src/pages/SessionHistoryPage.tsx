@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { listSessions } from "../api/sessions";
 import type { GameStatus } from "../types";
 
@@ -44,7 +45,8 @@ export function SessionHistoryPage() {
                 <th className="pb-3 pr-6 font-medium">Code</th>
                 <th className="pb-3 pr-6 font-medium">Date</th>
                 <th className="pb-3 pr-6 font-medium">Players</th>
-                <th className="pb-3 font-medium">Status</th>
+                <th className="pb-3 pr-6 font-medium">Status</th>
+                <th className="pb-3 font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800">
@@ -56,7 +58,17 @@ export function SessionHistoryPage() {
                     {new Date(s.created_at).toLocaleDateString()}
                   </td>
                   <td className="py-3 pr-6">{s.player_count}</td>
-                  <td className="py-3">{statusBadge(s.status)}</td>
+                  <td className="py-3 pr-6">{statusBadge(s.status)}</td>
+                  <td className="py-3">
+                    {s.status === "waiting" && (
+                      <Link
+                        to={`/admin/host/${s.code}`}
+                        className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition"
+                      >
+                        Resume →
+                      </Link>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

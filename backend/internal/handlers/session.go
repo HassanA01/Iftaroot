@@ -86,6 +86,23 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If a waiting session already exists for this quiz, return it rather than
+	// creating a new orphan. This prevents zombie "waiting" rows accumulating.
+	var existingCode string
+	var existingID uuid.UUID
+	_ = h.db.QueryRow(r.Context(),
+		`SELECT id, code FROM game_sessions WHERE quiz_id = $1 AND status = $2 LIMIT 1`,
+		req.QuizID, models.GameStatusWaiting,
+	).Scan(&existingID, &existingCode)
+
+	if existingCode != "" {
+		writeJSON(w, http.StatusOK, map[string]string{
+			"session_id": existingID.String(),
+			"code":       existingCode,
+		})
+		return
+	}
+
 	code, err := generateCode()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to generate session code")
