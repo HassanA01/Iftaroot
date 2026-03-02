@@ -13,6 +13,8 @@ import { SessionHistoryPage } from "./pages/SessionHistoryPage";
 import { JoinPage } from "./pages/JoinPage";
 import { PlayerLobbyPage } from "./pages/PlayerLobbyPage";
 import { PlayerGamePage } from "./pages/PlayerGamePage";
+import { LandingPage } from "./pages/LandingPage";
+import { useAuthStore } from "./stores/authStore";
 
 const NotFound = () => (
   <div className="min-h-screen w-full relative overflow-hidden flex items-center justify-center" style={{ background: "#1a0a2e" }}>
@@ -24,11 +26,20 @@ const NotFound = () => (
   </div>
 );
 
+// Authenticated users skip the landing page and go straight to the dashboard.
+function RootRoute() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  return isAuthenticated ? <Navigate to="/admin" replace /> : <LandingPage />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          {/* Landing page */}
+          <Route path="/" element={<RootRoute />} />
+
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -57,9 +68,6 @@ function App() {
           <Route path="/join" element={<JoinPage />} />
           <Route path="/game/:code" element={<PlayerLobbyPage />} />
           <Route path="/game/:code/play" element={<PlayerGamePage />} />
-
-          {/* Default redirect */}
-          <Route path="/" element={<Navigate to="/admin" replace />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
