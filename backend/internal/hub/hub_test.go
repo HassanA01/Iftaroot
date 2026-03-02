@@ -62,6 +62,37 @@ func TestBroadcastToHostEmptyRoom(t *testing.T) {
 	h.BroadcastToHost("NOROOM", Message{Type: MsgQuestion, Payload: nil})
 }
 
+func TestAnswerCountMessageType(t *testing.T) {
+	if MsgAnswerCount != "answer_count" {
+		t.Errorf("MsgAnswerCount = %q, want \"answer_count\"", MsgAnswerCount)
+	}
+}
+
+func TestBroadcastAnswerCountToHostOnly(t *testing.T) {
+	h := newTestHub()
+
+	hostSend := make(chan []byte, 4)
+	playerSend := make(chan []byte, 4)
+
+	host := &Client{ID: "host-1", IsHost: true, Send: hostSend}
+	player := &Client{ID: "player-1", IsHost: false, Send: playerSend}
+
+	h.JoinRoom("ROOM4", host)
+	h.JoinRoom("ROOM4", player)
+
+	h.BroadcastToHost("ROOM4", Message{
+		Type:    MsgAnswerCount,
+		Payload: map[string]any{"answered": 1, "total": 3},
+	})
+
+	if len(hostSend) != 1 {
+		t.Errorf("host should receive answer_count message, got %d messages", len(hostSend))
+	}
+	if len(playerSend) != 0 {
+		t.Errorf("player should not receive answer_count message, got %d messages", len(playerSend))
+	}
+}
+
 func TestBroadcastToPlayersNoPlayers(t *testing.T) {
 	h := newTestHub()
 

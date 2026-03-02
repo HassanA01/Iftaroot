@@ -50,15 +50,25 @@ export function useWebSocket({
     ws.onclose = () => onCloseRef.current?.();
     ws.onerror = (e) => onErrorRef.current?.(e);
     ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data) as WsMessage;
-        onMessageRef.current(msg);
-      } catch {
-        console.error("Failed to parse WS message", event.data);
+      // writePump may batch multiple messages in one frame (newline-separated).
+      const frames = (event.data as string).split("\n").filter(Boolean);
+      for (const frame of frames) {
+        try {
+          const msg = JSON.parse(frame) as WsMessage;
+          onMessageRef.current(msg);
+        } catch {
+          console.error("Failed to parse WS message", frame);
+        }
       }
     };
 
+    // Close proactively on tab close / navigation so the server detects the
+    // disconnect immediately rather than waiting for the ping/pong timeout.
+    const handlePageHide = () => ws.close();
+    window.addEventListener("pagehide", handlePageHide);
+
     return () => {
+      window.removeEventListener("pagehide", handlePageHide);
       ws.close();
     };
   }, [url, enabled]); // callbacks intentionally excluded — they live in refs

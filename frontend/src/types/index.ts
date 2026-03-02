@@ -80,7 +80,8 @@ export type MessageType =
   | "game_over"
   | "podium"
   | "error"
-  | "ping";
+  | "ping"
+  | "answer_count";
 
 export interface WsMessage<T = unknown> {
   type: MessageType;

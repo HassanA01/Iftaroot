@@ -1,5 +1,4 @@
-import { render, screen, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { HostGamePage } from "../pages/HostGamePage";
@@ -104,18 +103,69 @@ describe("HostGamePage", () => {
     expect(screen.getByRole("button", { name: /next question/i })).toBeInTheDocument();
   });
 
-  it("sends next_question via WS when host clicks Next Question", async () => {
+  it("shows arc transition then sends next_question after animation", () => {
+    vi.useFakeTimers();
+    try {
+      renderHostGame();
+      act(() => capturedOnMessage!(fakeQuestion));
+      act(() =>
+        capturedOnMessage!({
+          type: "leaderboard",
+          payload: { entries: [{ player_id: "p1", name: "Alice", score: 800, rank: 1 }] },
+        }),
+      );
+
+      const btn = screen.getByRole("button", { name: /next question/i });
+      act(() => { fireEvent.click(btn); });
+
+      // Arc transition is now showing — prayer labels visible, send not yet called
+      expect(screen.getByText("Fajr")).toBeInTheDocument();
+      expect(mockSend).not.toHaveBeenCalled();
+
+      // Advance past animation
+      act(() => {
+        vi.advanceTimersByTime(1600);
+      });
+
+      expect(mockSend).toHaveBeenCalledWith({ type: "next_question", payload: {} });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("updates answered count from answer_count message", () => {
     renderHostGame();
     act(() => capturedOnMessage!(fakeQuestion));
+
+    // Before any answer_count — shows 0 with no total
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
+
+    // Backend sends answer_count with answered=2, total=5
     act(() =>
       capturedOnMessage!({
-        type: "leaderboard",
-        payload: { entries: [{ player_id: "p1", name: "Alice", score: 800, rank: 1 }] },
+        type: "answer_count",
+        payload: { answered: 2, total: 5 },
       }),
     );
-    const btn = screen.getByRole("button", { name: /next question/i });
-    await userEvent.click(btn);
-    expect(mockSend).toHaveBeenCalledWith({ type: "next_question", payload: {} });
+
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getAllByText("/ 5").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("resets answered count to 0/N when a new question arrives", () => {
+    renderHostGame();
+    act(() => capturedOnMessage!(fakeQuestion));
+    act(() => capturedOnMessage!({ type: "answer_count", payload: { answered: 3, total: 3 } }));
+
+    // New question resets count
+    act(() =>
+      capturedOnMessage!({
+        ...fakeQuestion,
+        payload: { ...fakeQuestion.payload, question_index: 1 },
+      }),
+    );
+
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows podium on game_over", () => {
