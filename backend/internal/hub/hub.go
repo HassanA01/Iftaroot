@@ -25,6 +25,7 @@ const (
 	MsgPodium          MessageType = "podium"
 	MsgError           MessageType = "error"
 	MsgPing            MessageType = "ping"
+	MsgAnswerCount     MessageType = "answer_count"
 )
 
 // Message is the envelope for all WebSocket communication.

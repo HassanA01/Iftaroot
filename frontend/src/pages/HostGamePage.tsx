@@ -60,6 +60,7 @@ export function HostGamePage() {
   const leaderboardRef = useRef<LeaderboardEntry[]>([]);
   const [podium, setPodium] = useState<PodiumEntry[]>([]);
   const [answeredCount, setAnsweredCount] = useState(0);
+  const [totalPlayers, setTotalPlayers] = useState(0);
   const [wsReady, setWsReady] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [timeLimit, setTimeLimit] = useState(20);
@@ -89,9 +90,12 @@ export function HostGamePage() {
           setTimeLeft(p.question.time_limit);
           break;
         }
-        case "answer_submitted":
-          setAnsweredCount((n) => n + 1);
+        case "answer_count": {
+          const p = msg.payload as { answered: number; total: number };
+          setAnsweredCount(p.answered);
+          setTotalPlayers(p.total);
           break;
+        }
         case "answer_reveal": {
           const p = msg.payload as AnswerRevealPayload;
           setRevealPayload(p);
@@ -216,6 +220,9 @@ export function HostGamePage() {
           <div className="flex items-center gap-1.5">
             <Users className="w-4 h-4" style={{ color: "#2196f3" }} />
             <span className="font-bold text-white">{answeredCount}</span>
+            {totalPlayers > 0 && (
+              <span className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>/ {totalPlayers}</span>
+            )}
             <span className="hidden sm:inline text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>answered</span>
             <span className={`ml-1 w-2 h-2 rounded-full ${wsReady ? "bg-green-400" : "bg-yellow-400"} animate-pulse`} />
           </div>
@@ -301,7 +308,9 @@ export function HostGamePage() {
               <div className="p-4 rounded-xl flex items-center gap-3"
                 style={{ background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.2)" }}>
                 <motion.div className="w-2 h-2 rounded-full bg-green-400" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
-                <span className="text-sm font-bold text-white">{answeredCount}</span>
+                <span className="text-sm font-bold text-white">
+                  {answeredCount}{totalPlayers > 0 ? ` / ${totalPlayers}` : ""}
+                </span>
                 <span className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>players have answered</span>
               </div>
             )}

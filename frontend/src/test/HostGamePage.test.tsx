@@ -118,6 +118,41 @@ describe("HostGamePage", () => {
     expect(mockSend).toHaveBeenCalledWith({ type: "next_question", payload: {} });
   });
 
+  it("updates answered count from answer_count message", () => {
+    renderHostGame();
+    act(() => capturedOnMessage!(fakeQuestion));
+
+    // Before any answer_count — shows 0 with no total
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
+
+    // Backend sends answer_count with answered=2, total=5
+    act(() =>
+      capturedOnMessage!({
+        type: "answer_count",
+        payload: { answered: 2, total: 5 },
+      }),
+    );
+
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getAllByText("/ 5").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("resets answered count to 0/N when a new question arrives", () => {
+    renderHostGame();
+    act(() => capturedOnMessage!(fakeQuestion));
+    act(() => capturedOnMessage!({ type: "answer_count", payload: { answered: 3, total: 3 } }));
+
+    // New question resets count
+    act(() =>
+      capturedOnMessage!({
+        ...fakeQuestion,
+        payload: { ...fakeQuestion.payload, question_index: 1 },
+      }),
+    );
+
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
+  });
+
   it("shows podium on game_over", () => {
     renderHostGame();
     act(() =>

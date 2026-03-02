@@ -202,6 +202,16 @@ func (e *Engine) SubmitAnswer(ctx context.Context, sessionCode, playerID, questi
 	// Check if all connected players have answered.
 	playerCount := e.hub.RoomPlayerCount(sessionCode)
 	answeredCount, _ := e.redis.HLen(ctx, answerKey).Result()
+
+	// Notify the host of the updated answer tally.
+	e.hub.BroadcastToHost(sessionCode, hub.Message{
+		Type: hub.MsgAnswerCount,
+		Payload: map[string]any{
+			"answered": int(answeredCount),
+			"total":    playerCount,
+		},
+	})
+
 	if playerCount > 0 && int(answeredCount) >= playerCount {
 		// Cancel the timer and reveal immediately.
 		e.cancelTimer(sessionCode)
@@ -261,6 +271,16 @@ func (e *Engine) broadcastQuestion(ctx context.Context, sessionCode string, idx 
 	e.hub.BroadcastToHost(sessionCode, hub.Message{
 		Type:    hub.MsgQuestion,
 		Payload: BuildHostQuestionPayload(q, idx, state.TotalQuestions),
+	})
+
+	// Tell host the initial answered count (0 / N players).
+	playerCount := e.hub.RoomPlayerCount(sessionCode)
+	e.hub.BroadcastToHost(sessionCode, hub.Message{
+		Type: hub.MsgAnswerCount,
+		Payload: map[string]any{
+			"answered": 0,
+			"total":    playerCount,
+		},
 	})
 
 	// Start question timer.
