@@ -1,14 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { Plus, Trash2, Check, Sparkles } from "lucide-react";
 import { CrescentIcon } from "../components/icons";
 import { getQuiz, createQuiz, updateQuiz } from "../api/quizzes";
 import type { Quiz } from "../types";
 import type { QuestionInput } from "../api/quizzes";
 import { GenerateQuizModal } from "../components/GenerateQuizModal";
-import type { GenerateQuizResponse } from "../api/ai";
 
 interface OptionDraft {
   text: string;
@@ -159,22 +158,24 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
             <span className="relative z-10">Generate with AI</span>
           </motion.button>
 
-          {showAIModal && (
-            <GenerateQuizModal
-              onClose={() => setShowAIModal(false)}
-              onGenerated={(data: GenerateQuizResponse) => {
-                setShowAIModal(false);
-                setTitle(data.title);
-                setQuestions(
-                  data.questions.map((q) => ({
-                    text: q.text,
-                    time_limit: q.time_limit,
-                    options: q.options.map((o) => ({ text: o.text, is_correct: o.is_correct })),
-                  }))
-                );
-              }}
-            />
-          )}
+          <AnimatePresence>
+            {showAIModal && (
+              <GenerateQuizModal
+                onClose={() => setShowAIModal(false)}
+                onGenerated={(data) => {
+                  setShowAIModal(false);
+                  setTitle(data.title);
+                  setQuestions(
+                    data.questions.map((q) => ({
+                      text: q.text,
+                      time_limit: q.time_limit,
+                      options: q.options.map((o) => ({ text: o.text, is_correct: o.is_correct })),
+                    }))
+                  );
+                }}
+              />
+            )}
+          </AnimatePresence>
         </>
       )}
 

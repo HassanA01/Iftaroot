@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Sparkles, X } from "lucide-react";
 import { generateQuiz, type GenerateQuizResponse } from "../api/ai";
 
@@ -39,15 +39,14 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
   }
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      >
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
         <motion.div
           className="w-full max-w-md rounded-2xl p-6 relative"
           style={{
@@ -157,7 +156,6 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
             </form>
           )}
         </motion.div>
-      </motion.div>
-    </AnimatePresence>
+    </motion.div>
   );
 }
