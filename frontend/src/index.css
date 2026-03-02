@@ -34,14 +34,14 @@ body {
   background-color: #1a0a2e;
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30 30 0zm0 10L10 30l20 20 20-20-20-20z' fill='%23f5c842' fill-rule='evenodd'/%3E%3C/svg%3E");
   background-size: 60px 60px;
-  /* pattern at 5% — achieved via the .bg-ramadan-pattern overlay */
 }
 
-/* Semi-transparent arabesque overlay used inside .bg-ramadan containers */
+/* Full-viewport diamond lattice overlay — fixed so it never affects layout or scroll */
 .ramadan-pattern {
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
+  z-index: 0;
   opacity: 0.05;
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30 30 0zm0 10L10 30l20 20 20-20-20-20z' fill='%23f5c842' fill-rule='evenodd'/%3E%3C/svg%3E");
   background-size: 60px 60px;

@@ -1,31 +1,15 @@
-import { Outlet, useNavigate, NavLink, useMatch } from "react-router-dom";
+import { Outlet, useNavigate, NavLink } from "react-router-dom";
 import { motion } from "motion/react";
 import { CrescentIcon, LanternIcon } from "../components/icons";
 import { useAuthStore } from "../stores/authStore";
-import { useGameStore } from "../stores/gameStore";
-import { endSession } from "../api/sessions";
 
 export function AdminDashboardPage() {
   const navigate = useNavigate();
   const { admin, clearAuth } = useAuthStore();
-  const { activeSession, clearActiveSession } = useGameStore();
-
-  const gameMatch = useMatch("/admin/game/:code");
-  const isHostingGame = !!gameMatch;
 
   function handleLogout() {
     clearAuth();
     navigate("/login", { replace: true });
-  }
-
-  async function handleEndGame() {
-    if (!activeSession) return;
-    try {
-      await endSession(activeSession.sessionId);
-    } finally {
-      clearActiveSession();
-      navigate("/admin", { replace: true });
-    }
   }
 
   return (
@@ -80,19 +64,11 @@ export function AdminDashboardPage() {
           {admin?.email && (
             <span className="hidden sm:block text-sm truncate max-w-[180px]" style={{ color: "rgba(255,255,255,0.6)" }}>{admin.email}</span>
           )}
-          {isHostingGame && activeSession ? (
-            <motion.button onClick={handleEndGame} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="text-sm font-bold px-3 sm:px-4 py-2 rounded-lg transition"
-              style={{ background: "rgba(244,67,54,0.2)", color: "#f44336", border: "1px solid rgba(244,67,54,0.4)" }}>
-              End Game
-            </motion.button>
-          ) : (
-            <motion.button onClick={handleLogout} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="text-sm font-medium px-3 sm:px-4 py-2 rounded-lg transition"
-              style={{ color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.15)" }}>
-              Sign out
-            </motion.button>
-          )}
+          <motion.button onClick={handleLogout} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            className="text-sm font-medium px-3 sm:px-4 py-2 rounded-lg transition"
+            style={{ color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.15)" }}>
+            Sign out
+          </motion.button>
         </div>
       </header>
 

@@ -33,7 +33,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* Protected admin routes */}
+          {/* Protected admin routes — dashboard shell */}
           <Route
             path="/admin"
             element={
@@ -47,9 +47,11 @@ function App() {
             <Route path="quizzes/new" element={<QuizFormPage />} />
             <Route path="quizzes/:quizID/edit" element={<QuizFormPage />} />
             <Route path="history" element={<SessionHistoryPage />} />
-            <Route path="host/:code" element={<HostLobbyPage />} />
-            <Route path="game/:code" element={<HostGamePage />} />
           </Route>
+
+          {/* Full-screen admin game routes — outside dashboard shell to avoid double layout */}
+          <Route path="/admin/host/:code" element={<ProtectedRoute><HostLobbyPage /></ProtectedRoute>} />
+          <Route path="/admin/game/:code" element={<ProtectedRoute><HostGamePage /></ProtectedRoute>} />
 
           {/* Player-facing public routes */}
           <Route path="/join" element={<JoinPage />} />
