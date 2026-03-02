@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { Plus, Trash2, Check } from "lucide-react";
+import { Plus, Trash2, Check, Sparkles } from "lucide-react";
 import { CrescentIcon } from "../components/icons";
 import { getQuiz, createQuiz, updateQuiz } from "../api/quizzes";
 import type { Quiz } from "../types";
 import type { QuestionInput } from "../api/quizzes";
+import { GenerateQuizModal } from "../components/GenerateQuizModal";
+import type { GenerateQuizResponse } from "../api/ai";
 
 interface OptionDraft {
   text: string;
@@ -45,6 +47,7 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
   const [title, setTitle] = useState(initial.title);
   const [questions, setQuestions] = useState<QuestionDraft[]>(initial.questions);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   const mutation = useMutation({
     mutationFn: (input: { title: string; questions: QuestionInput[] }) =>
@@ -127,6 +130,53 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
         <CrescentIcon className="w-6 h-6" style={{ color: "#f5c842" }} />
         <h2 className="text-2xl font-black text-white">{isEdit ? "Edit quiz" : "New quiz"}</h2>
       </motion.div>
+
+      {!isEdit && (
+        <>
+          <motion.button
+            type="button"
+            onClick={() => setShowAIModal(true)}
+            className="w-full mb-6 py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #f5c842 0%, #ff6b35 100%)",
+              color: "white",
+              boxShadow: "0 6px 28px rgba(245,200,66,0.4)",
+            }}
+            whileHover={{ scale: 1.01, boxShadow: "0 10px 36px rgba(245,200,66,0.55)" }}
+            whileTap={{ scale: 0.99 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}>
+            <motion.span
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%)",
+                backgroundSize: "200% 100%",
+              }}
+              animate={{ backgroundPositionX: ["200%", "-200%"] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+            />
+            <Sparkles className="w-4 h-4 relative z-10" />
+            <span className="relative z-10">Generate with AI</span>
+          </motion.button>
+
+          {showAIModal && (
+            <GenerateQuizModal
+              onClose={() => setShowAIModal(false)}
+              onGenerated={(data: GenerateQuizResponse) => {
+                setShowAIModal(false);
+                setTitle(data.title);
+                setQuestions(
+                  data.questions.map((q) => ({
+                    text: q.text,
+                    time_limit: q.time_limit,
+                    options: q.options.map((o) => ({ text: o.text, is_correct: o.is_correct })),
+                  }))
+                );
+              }}
+            />
+          )}
+        </>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Title */}
@@ -305,6 +355,7 @@ function quizToInitial(quiz: Quiz) {
 
 export function QuizFormPage() {
   const { quizID } = useParams<{ quizID: string }>();
+  const location = useLocation();
   const isEdit = !!quizID;
 
   const { data: existing, isLoading, isError } = useQuery({
@@ -331,7 +382,8 @@ export function QuizFormPage() {
 
   const initial = existing
     ? quizToInitial(existing)
-    : { title: "", questions: [blankQuestion()] };
+    : (location.state as { generated?: { title: string; questions: QuestionDraft[] } })?.generated
+      ?? { title: "", questions: [blankQuestion()] };
 
   return <QuizForm quizID={quizID} initial={initial} />;
 }
