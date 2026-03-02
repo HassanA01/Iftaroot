@@ -62,7 +62,13 @@ export function useWebSocket({
       }
     };
 
+    // Close proactively on tab close / navigation so the server detects the
+    // disconnect immediately rather than waiting for the ping/pong timeout.
+    const handlePageHide = () => ws.close();
+    window.addEventListener("pagehide", handlePageHide);
+
     return () => {
+      window.removeEventListener("pagehide", handlePageHide);
       ws.close();
     };
   }, [url, enabled]); // callbacks intentionally excluded — they live in refs

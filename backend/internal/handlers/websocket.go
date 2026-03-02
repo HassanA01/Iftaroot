@@ -27,8 +27,8 @@ func newUpgrader(frontendURL string) *websocket.Upgrader {
 
 const (
 	writeWait      = 10 * time.Second
-	pongWait       = 60 * time.Second
-	pingPeriod     = (pongWait * 9) / 10
+	pongWait       = 5 * time.Second // fast disconnect detection; frontend sends close on pagehide
+	pingPeriod     = 3 * time.Second // must be < pongWait
 	maxMessageSize = 512
 )
 
