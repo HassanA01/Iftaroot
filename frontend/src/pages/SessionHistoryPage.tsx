@@ -84,17 +84,17 @@ export function SessionHistoryPage() {
         <div className="space-y-3">
           {sessions.map((s, i) => (
             <motion.div key={s.id}
-              className="px-5 py-4 rounded-2xl flex items-center gap-4"
+              className="px-4 sm:px-5 py-4 rounded-2xl flex items-start sm:items-center gap-3 sm:gap-4"
               style={{
                 background: "linear-gradient(135deg, rgba(42,20,66,0.7) 0%, rgba(30,15,50,0.8) 100%)",
                 border: "1px solid rgba(245,200,66,0.12)",
               }}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
 
-              {/* Quiz title */}
+              {/* Quiz title + meta */}
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-white truncate">{s.quiz_title}</p>
-                <div className="flex items-center gap-4 mt-1">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
                   <div className="flex items-center gap-1 text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
                     <Hash className="w-3 h-3" />
                     <span className="font-mono">{s.code}</span>
@@ -110,31 +110,31 @@ export function SessionHistoryPage() {
                 </div>
               </div>
 
-              {/* Status */}
-              <StatusBadge status={s.status} />
-
-              {/* Actions */}
-              {s.status === "waiting" && (
-                <div className="flex items-center gap-2">
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Link to={`/admin/host/${s.code}`}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
-                      style={{ background: "rgba(245,200,66,0.15)", color: "#f5c842", border: "1px solid rgba(245,200,66,0.3)" }}>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Resume
-                    </Link>
-                  </motion.div>
-                  <motion.button
-                    onClick={() => setPendingDelete(s.id)}
-                    disabled={deleteMutation.isPending}
-                    aria-label="Delete"
-                    className="p-1.5 rounded-lg transition disabled:opacity-50"
-                    style={{ background: "rgba(244,67,54,0.1)", color: "#f44336", border: "1px solid rgba(244,67,54,0.25)" }}
-                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </motion.button>
-                </div>
-              )}
+              {/* Status + actions — stacked on mobile, inline on sm+ */}
+              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
+                <StatusBadge status={s.status} />
+                {s.status === "waiting" && (
+                  <div className="flex items-center gap-2">
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Link to={`/admin/host/${s.code}`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
+                        style={{ background: "rgba(245,200,66,0.15)", color: "#f5c842", border: "1px solid rgba(245,200,66,0.3)" }}>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Resume
+                      </Link>
+                    </motion.div>
+                    <motion.button
+                      onClick={() => setPendingDelete(s.id)}
+                      disabled={deleteMutation.isPending}
+                      aria-label="Delete"
+                      className="p-1.5 rounded-lg transition disabled:opacity-50"
+                      style={{ background: "rgba(244,67,54,0.1)", color: "#f44336", border: "1px solid rgba(244,67,54,0.25)" }}
+                      whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </motion.button>
+                  </div>
+                )}
+              </div>
             </motion.div>
           ))}
         </div>

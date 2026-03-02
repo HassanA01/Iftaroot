@@ -109,7 +109,7 @@ export function HostLobbyPage() {
     <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
       <div className="ramadan-pattern" />
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center px-6 py-12 max-w-2xl mx-auto">
+      <div className="relative z-10 min-h-screen flex flex-col items-center px-4 sm:px-6 py-8 sm:py-12 max-w-2xl mx-auto">
         {/* Animated lanterns */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-32">
           {[{ delay: 0 }, { delay: 0.5 }].map((l, i) => (
@@ -127,7 +127,7 @@ export function HostLobbyPage() {
               <CrescentIcon className="w-6 h-6" style={{ color: "#f5c842" }} />
               <p className="text-sm font-medium uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.6)" }}>Room Code</p>
             </div>
-            <h1 className="text-8xl font-black tracking-widest" style={{
+            <h1 className="text-5xl sm:text-8xl font-black tracking-widest" style={{
               color: "#f5c842",
               textShadow: "0 0 30px rgba(245,200,66,0.6), 0 4px 20px rgba(0,0,0,0.5)",
             }}>

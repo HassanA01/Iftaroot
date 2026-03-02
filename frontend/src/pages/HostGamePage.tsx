@@ -178,11 +178,11 @@ export function HostGamePage() {
       <div className="ramadan-pattern" />
 
       {/* Top bar */}
-      <div className="relative z-20 px-8 py-4 flex items-center justify-between"
+      <div className="relative z-20 px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between"
         style={{ background: "linear-gradient(180deg, rgba(30,15,50,0.95) 0%, rgba(20,10,40,0.9) 100%)", borderBottom: "1px solid rgba(245,200,66,0.2)" }}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <CrescentIcon className="w-6 h-6" style={{ color: "#f5c842" }} />
-          <span className="text-lg font-bold" style={{ color: "#f5c842" }}>Iftaroot Live</span>
+          <span className="hidden sm:inline text-lg font-bold" style={{ color: "#f5c842" }}>Iftaroot Live</span>
           <span className="font-mono text-sm px-2 py-0.5 rounded" style={{ background: "rgba(245,200,66,0.1)", color: "rgba(255,255,255,0.5)" }}>{code}</span>
         </div>
         {currentQuestion && (
@@ -190,16 +190,16 @@ export function HostGamePage() {
             Question <span className="font-bold text-white">{currentQuestion.question_index + 1}</span> / {currentQuestion.total_questions}
           </div>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Users className="w-4 h-4" style={{ color: "#2196f3" }} />
           <span className="font-bold text-white">{answeredCount}</span>
-          <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>answered</span>
-          <span className={`ml-3 w-2 h-2 rounded-full ${wsReady ? "bg-green-400" : "bg-yellow-400"} animate-pulse`} />
+          <span className="hidden sm:inline text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>answered</span>
+          <span className={`ml-1 sm:ml-3 w-2 h-2 rounded-full ${wsReady ? "bg-green-400" : "bg-yellow-400"} animate-pulse`} />
         </div>
       </div>
 
       {currentQuestion && (
-        <div className="relative z-10 flex-1 flex flex-col gap-5 p-6 max-w-2xl mx-auto w-full">
+        <div className="relative z-10 flex-1 flex flex-col gap-5 p-4 sm:p-6 max-w-2xl mx-auto w-full">
           {/* Progress bar */}
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex items-center justify-between mb-2">
