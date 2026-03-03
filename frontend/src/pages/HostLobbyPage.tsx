@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { Users, Copy, Check } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { LanternIcon, CrescentIcon } from "../components/icons";
 import { getSessionByCode, listSessionPlayers, startSession } from "../api/sessions";
 import { useWebSocket } from "../hooks/useWebSocket";
@@ -152,6 +153,26 @@ export function HostLobbyPage() {
               style={{ background: copied ? "rgba(76,175,80,0.2)" : "rgba(245,200,66,0.2)", color: copied ? "#4caf50" : "#f5c842" }}>
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             </motion.button>
+          </motion.div>
+
+          {/* QR code */}
+          <motion.div
+            className="flex justify-center"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.25 }}
+          >
+            <div
+              className="p-4 rounded-2xl inline-block"
+              style={{ background: "white" }}
+            >
+              <QRCodeSVG
+                value={joinUrl}
+                size={200}
+                level="M"
+                data-testid="lobby-qr-code"
+              />
+            </div>
           </motion.div>
 
           {/* Player count */}

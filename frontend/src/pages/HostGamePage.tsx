@@ -156,7 +156,7 @@ export function HostGamePage() {
   }
 
   if (phase === "podium") {
-    return <PodiumScreen entries={podium} onEnd={handleEndGame} endLabel="Back to Dashboard" />;
+    return <PodiumScreen entries={podium.slice(0, 3)} onEnd={handleEndGame} endLabel="Back to Dashboard" />;
   }
 
   if (phase === "arc_transition") {

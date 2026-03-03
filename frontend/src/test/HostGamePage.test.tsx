@@ -187,4 +187,28 @@ describe("HostGamePage", () => {
     // Back to Dashboard is the only action button on the podium screen.
     expect(screen.getByRole("button", { name: /back to dashboard/i })).toBeInTheDocument();
   });
+
+  it("limits admin podium to top 3 players only", () => {
+    renderHostGame();
+    act(() =>
+      capturedOnMessage!({
+        type: "podium",
+        payload: {
+          entries: [
+            { player_id: "p1", name: "Alice", score: 3000, rank: 1 },
+            { player_id: "p2", name: "Bob", score: 2000, rank: 2 },
+            { player_id: "p3", name: "Carol", score: 1000, rank: 3 },
+            { player_id: "p4", name: "Dave", score: 500, rank: 4 },
+            { player_id: "p5", name: "Eve", score: 300, rank: 5 },
+          ],
+        },
+      }),
+    );
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByText("Bob")).toBeInTheDocument();
+    expect(screen.getByText("Carol")).toBeInTheDocument();
+    // 4th and 5th players should NOT appear on the admin podium
+    expect(screen.queryByText("Dave")).not.toBeInTheDocument();
+    expect(screen.queryByText("Eve")).not.toBeInTheDocument();
+  });
 });
