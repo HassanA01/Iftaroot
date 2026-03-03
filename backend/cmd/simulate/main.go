@@ -33,6 +33,7 @@ type wsMsg struct {
 func main() {
 	apiBase := flag.String("api", "http://localhost:8081", "API base URL")
 	wsBase := flag.String("ws", "ws://localhost:8081", "WebSocket base URL")
+	origin := flag.String("origin", "http://localhost:5173", "Origin header (must match FRONTEND_URL)")
 	sessionCode := flag.String("code", "", "Session code to join (required)")
 	numPlayers := flag.Int("players", 40, "Number of simulated players")
 	flag.Parse()
@@ -81,7 +82,7 @@ func main() {
 				*wsBase, *sessionCode, p.ID, url.QueryEscape(p.Name))
 
 			header := http.Header{}
-			header.Set("Origin", *apiBase)
+			header.Set("Origin", *origin)
 			conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
 			if resp != nil && resp.Body != nil {
 				resp.Body.Close()
@@ -92,10 +93,26 @@ func main() {
 			}
 			defer conn.Close()
 
+			// Write channel so we never block the read loop.
+			writeCh := make(chan []byte, 16)
+			done := make(chan struct{})
+
+			// Writer goroutine — serialises all writes to the conn.
+			go func() {
+				defer close(done)
+				for msg := range writeCh {
+					if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+						log.Printf("[%s] write error: %v", p.Name, err)
+						return
+					}
+				}
+			}()
+
 			for {
 				_, raw, err := conn.ReadMessage()
 				if err != nil {
 					log.Printf("[%s] disconnected: %v", p.Name, err)
+					close(writeCh)
 					return
 				}
 				for _, line := range bytes.Split(raw, []byte("\n")) {
@@ -126,33 +143,40 @@ func main() {
 						}
 						log.Printf("[%s] got question: %s", p.Name, qPayload.Question.Text)
 
-						// Random delay 1-5s, pick random option
-						delayN, _ := rand.Int(rand.Reader, big.NewInt(4000))
-						delay := time.Duration(1000+delayN.Int64()) * time.Millisecond
-						time.Sleep(delay)
+						// Answer in a goroutine so the read loop stays unblocked
+						// (keeps protocol-level pong responses flowing).
+						go func() {
+							delayN, _ := rand.Int(rand.Reader, big.NewInt(4000))
+							delay := time.Duration(1000+delayN.Int64()) * time.Millisecond
+							time.Sleep(delay)
 
-						optN, _ := rand.Int(rand.Reader, big.NewInt(int64(len(qPayload.Question.Options))))
-						optIdx := int(optN.Int64())
-						answer, _ := json.Marshal(map[string]any{
-							"type": "answer_submitted",
-							"payload": map[string]string{
-								"question_id": qPayload.Question.ID,
-								"option_id":   qPayload.Question.Options[optIdx].ID,
-							},
-						})
-						if err := conn.WriteMessage(websocket.TextMessage, answer); err != nil {
-							log.Printf("[%s] write answer: %v", p.Name, err)
-							return
-						}
-						log.Printf("[%s] answered option %d after %v", p.Name, optIdx+1, delay)
+							optN, _ := rand.Int(rand.Reader, big.NewInt(int64(len(qPayload.Question.Options))))
+							optIdx := int(optN.Int64())
+							answer, _ := json.Marshal(map[string]any{
+								"type": "answer_submitted",
+								"payload": map[string]string{
+									"question_id": qPayload.Question.ID,
+									"option_id":   qPayload.Question.Options[optIdx].ID,
+								},
+							})
+							select {
+							case writeCh <- answer:
+								log.Printf("[%s] answered option %d after %v", p.Name, optIdx+1, delay)
+							case <-done:
+							}
+						}()
 
 					case "podium":
 						log.Printf("[%s] game over — podium received", p.Name)
+						close(writeCh)
 						return
 
 					case "ping":
 						pong, _ := json.Marshal(map[string]any{"type": "ping", "payload": "pong"})
-						_ = conn.WriteMessage(websocket.TextMessage, pong)
+						select {
+						case writeCh <- pong:
+						case <-done:
+						}
 					}
 				}
 			}
