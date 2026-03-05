@@ -24,6 +24,9 @@ func main() {
 	_ = godotenv.Load()
 
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("invalid configuration: %v", err)
+	}
 
 	database, err := db.Connect(cfg.DatabaseURL)
 	if err != nil {
