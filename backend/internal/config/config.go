@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strings"
+	"unicode"
 )
 
 type Config struct {
@@ -15,11 +18,6 @@ type Config struct {
 }
 
 func Load() *Config {
-	secret := getEnv("JWT_SECRET", "")
-	if secret == "" {
-		log.Fatal("JWT_SECRET environment variable is required")
-	}
-
 	anthropicKey := getEnv("ANTHROPIC_API_KEY", "")
 	if anthropicKey == "" {
 		log.Println("ANTHROPIC_API_KEY not set — AI quiz generation disabled")
@@ -29,10 +27,50 @@ func Load() *Config {
 		Port:            getEnv("PORT", "8081"),
 		DatabaseURL:     getEnv("DATABASE_URL", "postgres://hilal:hilal@localhost:5432/hilal?sslmode=disable"),
 		RedisURL:        getEnv("REDIS_URL", "redis://localhost:6379"),
-		JWTSecret:       secret,
+		JWTSecret:       getEnv("JWT_SECRET", ""),
 		FrontendURL:     getEnv("FRONTEND_URL", "http://localhost:5173"),
 		AnthropicAPIKey: anthropicKey,
 	}
+}
+
+// Validate checks that all required env vars are present and well-formed.
+// Call this before attempting any DB/Redis connections.
+func (c *Config) Validate() error {
+	required := map[string]string{
+		"DATABASE_URL": c.DatabaseURL,
+		"REDIS_URL":    c.RedisURL,
+		"JWT_SECRET":   c.JWTSecret,
+		"PORT":         c.Port,
+		"FRONTEND_URL": c.FrontendURL,
+	}
+	for name, val := range required {
+		if strings.TrimSpace(val) == "" {
+			return fmt.Errorf("%s is required and must not be empty", name)
+		}
+	}
+
+	if !strings.HasPrefix(c.DatabaseURL, "postgres://") && !strings.HasPrefix(c.DatabaseURL, "postgresql://") {
+		return fmt.Errorf("DATABASE_URL must start with postgres:// or postgresql://")
+	}
+
+	if !strings.HasPrefix(c.RedisURL, "redis://") && !strings.HasPrefix(c.RedisURL, "rediss://") {
+		return fmt.Errorf("REDIS_URL must start with redis:// or rediss://")
+	}
+	if containsControlChars(c.RedisURL) {
+		return fmt.Errorf("REDIS_URL contains control characters (newlines, tabs, etc.) — check for line-wrapping in your config")
+	}
+
+	return nil
+}
+
+// containsControlChars returns true if s contains any ASCII control character.
+func containsControlChars(s string) bool {
+	for _, r := range s {
+		if unicode.IsControl(r) {
+			return true
+		}
+	}
+	return false
 }
 
 func getEnv(key, defaultVal string) string {
