@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"unicode"
 )
 
 type Config struct {
-	Port            string
-	DatabaseURL     string
-	RedisURL        string
-	JWTSecret       string
-	FrontendURL     string
-	AnthropicAPIKey string
+	Port               string
+	DatabaseURL        string
+	RedisURL           string
+	JWTSecret          string
+	FrontendURL        string
+	AnthropicAPIKey    string
+	AIRateLimitPerHour int
 }
 
 func Load() *Config {
@@ -23,13 +25,21 @@ func Load() *Config {
 		log.Println("ANTHROPIC_API_KEY not set — AI quiz generation disabled")
 	}
 
+	aiRateLimit := 5
+	if v := os.Getenv("AI_RATE_LIMIT_PER_HOUR"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			aiRateLimit = n
+		}
+	}
+
 	return &Config{
-		Port:            getEnv("PORT", "8081"),
-		DatabaseURL:     getEnv("DATABASE_URL", "postgres://hilal:hilal@localhost:5432/hilal?sslmode=disable"),
-		RedisURL:        getEnv("REDIS_URL", "redis://localhost:6379"),
-		JWTSecret:       getEnv("JWT_SECRET", ""),
-		FrontendURL:     getEnv("FRONTEND_URL", "http://localhost:5173"),
-		AnthropicAPIKey: anthropicKey,
+		Port:               getEnv("PORT", "8081"),
+		DatabaseURL:        getEnv("DATABASE_URL", "postgres://hilal:hilal@localhost:5432/hilal?sslmode=disable"),
+		RedisURL:           getEnv("REDIS_URL", "redis://localhost:6379"),
+		JWTSecret:          getEnv("JWT_SECRET", ""),
+		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
+		AnthropicAPIKey:    anthropicKey,
+		AIRateLimitPerHour: aiRateLimit,
 	}
 }
 

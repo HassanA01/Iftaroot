@@ -35,9 +35,13 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
       const data = await generateQuiz({ topic: topic.trim(), question_count: count, context: context.trim() });
       onGenerated(data);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        "Something went wrong. Please try again.";
+      const axiosErr = err as { response?: { status?: number; data?: { error?: string } } };
+      let msg: string;
+      if (axiosErr?.response?.status === 429) {
+        msg = axiosErr.response.data?.error ?? "Rate limit exceeded. Please try again later.";
+      } else {
+        msg = axiosErr?.response?.data?.error ?? "Something went wrong. Please try again.";
+      }
       setError(msg);
     } finally {
       setLoading(false);

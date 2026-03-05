@@ -12,6 +12,9 @@ import (
 	"unicode"
 
 	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/redis/go-redis/v9"
+
+	"github.com/HassanA01/Hilal/backend/internal/middleware"
 )
 
 // maxAIQuestions is the hard cap on AI-generated question count.
@@ -60,26 +63,34 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Check API key
+	// 3. Rate limit check
+	adminID := middleware.GetAdminID(r.Context())
+	if retryAfter, limited := h.checkRateLimit(r.Context(), adminID); limited {
+		w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+		writeError(w, http.StatusTooManyRequests, "Rate limit exceeded. You can generate up to "+strconv.Itoa(h.config.AIRateLimitPerHour)+" quizzes per hour.")
+		return
+	}
+
+	// 4. Check API key
 	if h.anthropicClient == nil {
 		writeError(w, http.StatusServiceUnavailable, "AI quiz generation is not configured")
 		return
 	}
 
-	// 4. Guardrail: classify input with Haiku before the expensive Sonnet call
+	// 5. Guardrail: classify input with Haiku before the expensive Sonnet call
 	if reason, ok := h.classifyInput(r.Context(), req.Topic, req.AdditionalContext); !ok {
 		slog.Warn("ai_generation_rejected", "reason", reason)
 		writeError(w, http.StatusBadRequest, reason)
 		return
 	}
 
-	// 5. Build prompt
+	// 6. Build prompt
 	userPrompt := "Generate a quiz about: " + req.Topic + ". Number of questions: " + strconv.Itoa(req.QuestionCount) + "."
 	if req.AdditionalContext != "" {
 		userPrompt += " Additional context: " + req.AdditionalContext
 	}
 
-	// 6. Define the tool schema
+	// 7. Define the tool schema
 	toolSchema := anthropic.ToolInputSchemaParam{
 		Properties: map[string]any{
 			"title": map[string]any{
@@ -134,7 +145,7 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 
 	tool := anthropic.ToolUnionParamOfTool(toolSchema, "create_quiz")
 
-	// 7. Call Claude with a 30s timeout, forced tool use
+	// 8. Call Claude with a 30s timeout, forced tool use
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
@@ -159,7 +170,7 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 8. Find the tool_use block in the response
+	// 9. Find the tool_use block in the response
 	var toolInput json.RawMessage
 	for _, block := range resp.Content {
 		if block.Type == "tool_use" && block.Name == "create_quiz" {
@@ -172,20 +183,20 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 9. Unmarshal into createQuizRequest (defined in quiz.go)
+	// 10. Unmarshal into createQuizRequest (defined in quiz.go)
 	var quiz createQuizRequest
 	if err := json.Unmarshal(toolInput, &quiz); err != nil {
 		writeError(w, http.StatusBadGateway, "AI returned malformed quiz data")
 		return
 	}
 
-	// 10. Validate result
+	// 11. Validate result
 	if quiz.Title == "" || len(quiz.Questions) == 0 {
 		writeError(w, http.StatusBadGateway, "AI returned an incomplete quiz")
 		return
 	}
 
-	// 11. Post-unmarshal validation: ensure each question has valid structure
+	// 12. Post-unmarshal validation: ensure each question has valid structure
 	for i, q := range quiz.Questions {
 		if q.Text == "" {
 			writeError(w, http.StatusBadGateway, "AI returned invalid response, please try again")
@@ -208,8 +219,67 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 		_ = i
 	}
 
-	// 12. Return the generated quiz
+	// 13. Return the generated quiz
 	writeJSON(w, http.StatusOK, quiz)
+}
+
+// checkRateLimit uses a Redis sorted set as a sliding window to enforce
+// per-user rate limits on AI generation. Returns (retryAfterSeconds, true)
+// if the user has exceeded the limit.
+func (h *Handler) checkRateLimit(ctx context.Context, adminID string) (int, bool) {
+	if h.redis == nil {
+		return 0, false // no Redis → skip rate limiting
+	}
+
+	limit := h.config.AIRateLimitPerHour
+	if limit <= 0 {
+		return 0, false
+	}
+
+	key := "ratelimit:ai:" + adminID
+	now := time.Now()
+	windowStart := now.Add(-1 * time.Hour)
+
+	pipe := h.redis.Pipeline()
+
+	// Remove entries older than 1 hour
+	pipe.ZRemRangeByScore(ctx, key, "0", strconv.FormatInt(windowStart.UnixMilli(), 10))
+
+	// Count entries in the current window
+	countCmd := pipe.ZCard(ctx, key)
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		slog.Warn("rate_limit_check_failed", "error", err)
+		return 0, false // fail-open
+	}
+
+	count := countCmd.Val()
+	if count >= int64(limit) {
+		// Find the oldest entry to calculate retry-after
+		oldest, err := h.redis.ZRangeWithScores(ctx, key, 0, 0).Result()
+		retryAfter := 60 // default fallback
+		if err == nil && len(oldest) > 0 {
+			oldestTime := time.UnixMilli(int64(oldest[0].Score))
+			retryAfter = int(oldestTime.Add(time.Hour).Sub(now).Seconds()) + 1
+			if retryAfter < 1 {
+				retryAfter = 1
+			}
+		}
+		return retryAfter, true
+	}
+
+	// Add the current request to the window
+	if err := h.redis.ZAdd(ctx, key, redis.Z{
+		Score:  float64(now.UnixMilli()),
+		Member: strconv.FormatInt(now.UnixNano(), 10),
+	}).Err(); err != nil {
+		slog.Warn("rate_limit_record_failed", "error", err)
+	}
+
+	// Set TTL so the key auto-expires
+	h.redis.Expire(ctx, key, time.Hour+time.Minute)
+
+	return 0, false
 }
 
 const classifySystemPrompt = `You are a content classifier for an educational quiz generation app.
