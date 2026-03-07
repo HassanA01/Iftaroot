@@ -207,3 +207,40 @@ export interface EngagementData {
   peak_hours: PeakHourBucket[];
   avg_game_duration_seconds: number;
 }
+
+// Platform metrics types (superadmin only)
+export interface PlatformOverview {
+  total_admins: number;
+  total_quizzes: number;
+  total_games: number;
+  total_players: number;
+  total_answers: number;
+  avg_players_per_game: number;
+}
+
+export interface PlatformGrowthPoint {
+  date: string;
+  admins: number;
+  quizzes: number;
+  games: number;
+}
+
+export interface PlatformAdminStats {
+  id: string;
+  email: string;
+  quiz_count: number;
+  game_count: number;
+  player_count: number;
+  last_active: string | null;
+  created_at: string;
+}
+
+export interface PlatformAIStats {
+  total_quizzes: number;
+}
+
+export interface PlatformEngagement {
+  peak_hours: PeakHourBucket[];
+  avg_game_duration_seconds: number;
+  total_active_days: number;
+}
