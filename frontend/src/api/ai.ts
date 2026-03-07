@@ -16,3 +16,22 @@ export async function generateQuiz(input: GenerateQuizInput): Promise<GenerateQu
   const { data } = await apiClient.post<GenerateQuizResponse>("/quizzes/generate", input);
   return data;
 }
+
+export async function generateQuizFromUpload(
+  file: File,
+  questionCount: number,
+): Promise<GenerateQuizResponse> {
+  const formData = new FormData();
+  formData.append("document", file);
+  formData.append("question_count", String(questionCount));
+
+  const { data } = await apiClient.post<GenerateQuizResponse>(
+    "/quizzes/generate/upload",
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60000,
+    },
+  );
+  return data;
+}

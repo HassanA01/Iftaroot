@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +16,7 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/HassanA01/Hilal/backend/internal/docextract"
 	"github.com/HassanA01/Hilal/backend/internal/metrics"
 	"github.com/HassanA01/Hilal/backend/internal/middleware"
 )
@@ -78,20 +81,116 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Guardrail: classify input with Haiku before the expensive Sonnet call
-	if reason, ok := h.classifyInput(r.Context(), req.Topic, req.AdditionalContext); !ok {
-		slog.Warn("ai_generation_rejected", "reason", reason)
-		writeError(w, http.StatusBadRequest, reason)
-		return
+	// 5. Build guardrail text and prompt
+	guardrailText := req.Topic
+	if req.AdditionalContext != "" {
+		guardrailText += "\n" + req.AdditionalContext
 	}
-
-	// 6. Build prompt
 	userPrompt := "Generate a quiz about: " + req.Topic + ". Number of questions: " + strconv.Itoa(req.QuestionCount) + "."
 	if req.AdditionalContext != "" {
 		userPrompt += " Additional context: " + req.AdditionalContext
 	}
 
-	// 7. Define the tool schema
+	// 6. Delegate to shared pipeline (guardrail → Claude call → parse → validate → respond)
+	h.generateQuizFromText(w, r, guardrailText, userPrompt)
+}
+
+const maxUploadSize = docextract.MaxDocumentSize
+
+// GenerateQuizFromUpload generates a quiz from an uploaded document.
+func (h *Handler) GenerateQuizFromUpload(w http.ResponseWriter, r *http.Request) {
+	// 1. Parse multipart form
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large (max 5MB)")
+		return
+	}
+
+	// 2. Get question_count from form field
+	questionCount, err := strconv.Atoi(r.FormValue("question_count"))
+	if err != nil || questionCount < 1 || questionCount > maxAIQuestions {
+		writeError(w, http.StatusBadRequest, "question_count must be between 1 and "+strconv.Itoa(maxAIQuestions))
+		return
+	}
+
+	// 3. Get the file
+	file, header, err := r.FormFile("document")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "document file is required")
+		return
+	}
+	defer file.Close()
+
+	// 4. Validate file size
+	if header.Size > maxUploadSize {
+		writeError(w, http.StatusBadRequest, "file too large (max 5MB)")
+		return
+	}
+
+	// 5. Validate extension
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if !docextract.SupportedExtensions[ext] {
+		writeError(w, http.StatusBadRequest, "unsupported file type: supported formats are PDF, DOCX, TXT, MD")
+		return
+	}
+
+	// 6. Read file into memory
+	data, err := io.ReadAll(io.LimitReader(file, maxUploadSize+1))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to read file")
+		return
+	}
+	if int64(len(data)) > maxUploadSize {
+		writeError(w, http.StatusBadRequest, "file too large (max 5MB)")
+		return
+	}
+
+	// 7. Extract text (before rate limit so invalid files don't consume quota)
+	result, err := docextract.Extract(data, header.Filename)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to extract text: "+err.Error())
+		return
+	}
+
+	// 8. Rate limit check
+	adminID := middleware.GetAdminID(r.Context())
+	if retryAfter, limited := h.checkRateLimit(r.Context(), adminID); limited {
+		w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+		writeError(w, http.StatusTooManyRequests, "Rate limit exceeded. You can generate up to "+strconv.Itoa(h.config.AIRateLimitPerHour)+" quizzes per hour.")
+		return
+	}
+
+	// 9. Check API key
+	if h.anthropicClient == nil {
+		writeError(w, http.StatusServiceUnavailable, "AI quiz generation is not configured")
+		return
+	}
+
+	// 10. Build guardrail snippet (first 1000 chars) and prompt
+	guardrailSnippet := result.Text
+	if len(guardrailSnippet) > 1000 {
+		guardrailSnippet = guardrailSnippet[:1000]
+	}
+
+	userPrompt := fmt.Sprintf(
+		"Generate a quiz with %d questions based on the following document content. "+
+			"Extract the key concepts and create questions that test understanding of the material.\n\n"+
+			"Document content:\n%s", questionCount, result.Text)
+
+	// 11. Delegate to shared pipeline
+	h.generateQuizFromText(w, r, guardrailSnippet, userPrompt)
+}
+
+// generateQuizFromText runs the shared AI quiz generation pipeline:
+// guardrail classification → Claude Sonnet call → parse tool response → validate → respond.
+func (h *Handler) generateQuizFromText(w http.ResponseWriter, r *http.Request, guardrailText, userPrompt string) {
+	// 1. Guardrail: classify input with Haiku before the expensive Sonnet call
+	if reason, ok := h.classifyInput(r.Context(), guardrailText, ""); !ok {
+		slog.Warn("ai_generation_rejected", "reason", reason)
+		writeError(w, http.StatusBadRequest, reason)
+		return
+	}
+
+	// 2. Define the tool schema
 	toolSchema := anthropic.ToolInputSchemaParam{
 		Properties: map[string]any{
 			"title": map[string]any{
@@ -146,7 +245,7 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 
 	tool := anthropic.ToolUnionParamOfTool(toolSchema, "create_quiz")
 
-	// 8. Call Claude with a 30s timeout, forced tool use
+	// 3. Call Claude with a 30s timeout, forced tool use
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
@@ -173,7 +272,7 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 9. Find the tool_use block in the response
+	// 4. Find the tool_use block in the response
 	var toolInput json.RawMessage
 	for _, block := range resp.Content {
 		if block.Type == "tool_use" && block.Name == "create_quiz" {
@@ -186,20 +285,20 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 10. Unmarshal into createQuizRequest (defined in quiz.go)
+	// 5. Unmarshal into createQuizRequest (defined in quiz.go)
 	var quiz createQuizRequest
 	if err := json.Unmarshal(toolInput, &quiz); err != nil {
 		writeError(w, http.StatusBadGateway, "AI returned malformed quiz data")
 		return
 	}
 
-	// 11. Validate result
+	// 6. Validate result
 	if quiz.Title == "" || len(quiz.Questions) == 0 {
 		writeError(w, http.StatusBadGateway, "AI returned an incomplete quiz")
 		return
 	}
 
-	// 12. Post-unmarshal validation: ensure each question has valid structure
+	// 7. Post-unmarshal validation: ensure each question has valid structure
 	for i, q := range quiz.Questions {
 		if q.Text == "" {
 			writeError(w, http.StatusBadGateway, "AI returned invalid response, please try again")
@@ -222,7 +321,7 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 		_ = i
 	}
 
-	// 13. Return the generated quiz
+	// 8. Return the generated quiz
 	writeJSON(w, http.StatusOK, quiz)
 }
 
