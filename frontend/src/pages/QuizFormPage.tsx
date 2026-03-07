@@ -2,12 +2,13 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "motion/react";
-import { Plus, Trash2, Check, Sparkles, ArrowUp, ArrowDown, Image } from "lucide-react";
+import { Plus, Trash2, Check, Sparkles, ArrowUp, ArrowDown, Image, Loader2 } from "lucide-react";
 import { CrescentIcon } from "../components/icons";
 import { getQuiz, createQuiz, updateQuiz } from "../api/quizzes";
 import type { Quiz, QuestionType } from "../types";
 import type { QuestionInput } from "../api/quizzes";
 import { GenerateQuizModal } from "../components/GenerateQuizModal";
+import { uploadImage } from "../api/uploads";
 
 interface OptionDraft {
   text: string;
@@ -78,6 +79,8 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
   const [questions, setQuestions] = useState<QuestionDraft[]>(initial.questions);
   const [formError, setFormError] = useState<string | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [uploadingQuestion, setUploadingQuestion] = useState<number | null>(null);
+  const [uploadingOption, setUploadingOption] = useState<{ q: number; o: number } | null>(null);
 
   const mutation = useMutation({
     mutationFn: (input: { title: string; questions: QuestionInput[] }) =>
@@ -192,6 +195,29 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
     }));
   }
 
+  async function handleImageUpload(qIdx: number, file: File) {
+    setUploadingQuestion(qIdx);
+    try {
+      const { url } = await uploadImage(file);
+      updateQuestion(qIdx, { image_url: url });
+    } catch {
+      setFormError("Failed to upload image. Please try again.");
+    } finally {
+      setUploadingQuestion(null);
+    }
+  }
+  async function handleOptionImageUpload(qIdx: number, oIdx: number, file: File) {
+    setUploadingOption({ q: qIdx, o: oIdx });
+    try {
+      const { url } = await uploadImage(file);
+      updateOption(qIdx, oIdx, { image_url: url });
+    } catch {
+      setFormError("Failed to upload image. Please try again.");
+    } finally {
+      setUploadingOption(null);
+    }
+  }
+
   const inputStyle = {
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(245,200,66,0.2)",
@@ -257,7 +283,23 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
                 />
                 {isImage && (
                   <div className="flex items-center gap-1">
-                    <Image className="w-3 h-3 shrink-0" style={{ color: "rgba(255,255,255,0.4)" }} />
+                    <label className="cursor-pointer shrink-0" title="Upload image">
+                      {uploadingOption?.q === qIdx && uploadingOption?.o === oIdx ? (
+                        <Loader2 className="w-3 h-3 animate-spin" style={{ color: "#f5c842" }} />
+                      ) : (
+                        <Image className="w-3 h-3" style={{ color: "rgba(255,255,255,0.4)" }} />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleOptionImageUpload(qIdx, oIdx, f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
                     <input
                       type="url"
                       value={o.image_url ?? ""}
@@ -266,6 +308,10 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
                       style={inputStyle}
                       placeholder="Image URL"
                     />
+                    {o.image_url && (
+                      <img src={o.image_url} alt="Preview" className="w-6 h-6 rounded object-cover shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                    )}
                   </div>
                 )}
               </div>
@@ -413,19 +459,41 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
                 placeholder={q.type === "ordering" ? "e.g. Arrange these events in chronological order" : "Question text"}
               />
 
-              {q.type === "image_choice" && (
-                <div className="flex items-center gap-2">
-                  <Image className="w-3.5 h-3.5 shrink-0" style={{ color: "rgba(255,255,255,0.4)" }} />
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer shrink-0 p-1 rounded-lg transition hover:bg-white/10" title="Upload image">
+                  {uploadingQuestion === qIdx ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: "#f5c842" }} />
+                  ) : (
+                    <Image className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.4)" }} />
+                  )}
                   <input
-                    type="url"
-                    value={q.image_url ?? ""}
-                    onChange={(e) => updateQuestion(qIdx, { image_url: e.target.value })}
-                    className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none transition"
-                    style={inputStyle}
-                    placeholder="Question image URL (optional)"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleImageUpload(qIdx, f);
+                      e.target.value = "";
+                    }}
                   />
-                </div>
-              )}
+                </label>
+                <input
+                  type="url"
+                  value={q.image_url ?? ""}
+                  onChange={(e) => updateQuestion(qIdx, { image_url: e.target.value })}
+                  className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none transition"
+                  style={inputStyle}
+                  placeholder="Question image URL (optional)"
+                />
+                {q.image_url && (
+                  <img
+                    src={q.image_url}
+                    alt="Preview"
+                    className="w-8 h-8 rounded object-cover shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                )}
+              </div>
 
               <div className="flex items-center gap-3">
                 <label className="text-xs whitespace-nowrap" style={{ color: "rgba(255,255,255,0.5)" }}>Time limit (s)</label>
