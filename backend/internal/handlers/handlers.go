@@ -49,6 +49,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 			r.Get("/quizzes", h.ListQuizzes)
 			r.Post("/quizzes", h.CreateQuiz)
 			r.Post("/quizzes/generate", h.GenerateQuiz)
+			r.Post("/quizzes/generate/upload", h.GenerateQuizFromUpload)
 			r.Get("/quizzes/{quizID}", h.GetQuiz)
 			r.Put("/quizzes/{quizID}", h.UpdateQuiz)
 			r.Delete("/quizzes/{quizID}", h.DeleteQuiz)
