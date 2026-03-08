@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
+import confetti from "canvas-confetti";
 import { Trophy, Sparkles } from "lucide-react";
 import { LanternIcon, CrescentIcon } from "./icons";
 import type { PodiumEntry, PlayerResults } from "../types";
@@ -12,88 +13,93 @@ interface Props {
   playerResults?: PlayerResults | null;
 }
 
-// Deterministic confetti (stable across renders)
-// Gold-dominant palette with warm accents — cohesive with Hilal theme
-const CONFETTI_COLORS = [
-  "#f5c842", "#f5c842", "#ffd700", "#daa520",  // golds (weighted)
-  "#fff8dc", "#e8d5b7",                         // cream / sand
-  "#ff6b35",                                     // warm accent
-  "#cd7f32",                                     // bronze
-];
+const GOLD_COLORS = ["#f5c842", "#ffd700", "#daa520", "#fff8dc", "#ff6b35", "#cd7f32"];
 
-type ConfettiShape = "rect" | "circle" | "ribbon" | "dot";
-type ConfettiFall = "fall" | "sway";
-type ConfettiSpin = "spin" | "flutter" | "shimmer";
+function fireCelebration() {
+  const duration = 6000;
+  const end = Date.now() + duration;
 
-interface ConfettiPiece {
-  id: number;
-  color: string;
-  left: string;
-  delay: string;
-  duration: string;
-  width: string;
-  height: string;
-  borderRadius: string;
-  drift: string;
-  fallClass: string;
-  spinClass: string;
-  opacity: number;
-}
+  // Side cannons — continuous confetti rain
+  const frame = () => {
+    confetti({
+      particleCount: 3,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.6 },
+      colors: GOLD_COLORS,
+      ticks: 200,
+      gravity: 0.8,
+      scalar: 1.2,
+      drift: 0.5,
+    });
+    confetti({
+      particleCount: 3,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.6 },
+      colors: GOLD_COLORS,
+      ticks: 200,
+      gravity: 0.8,
+      scalar: 1.2,
+      drift: -0.5,
+    });
+    if (Date.now() < end) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 
-function generateConfetti(count: number): ConfettiPiece[] {
-  let seed = 42;
-  const rng = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return ((seed >>> 0) / 0xffffffff) % 1; };
+  // Firework bursts — staggered explosions from bottom
+  const launchFirework = (delay: number, x: number) => {
+    setTimeout(() => {
+      // Big burst
+      confetti({
+        particleCount: 80,
+        spread: 360,
+        origin: { x, y: 0.3 + Math.random() * 0.2 },
+        colors: GOLD_COLORS,
+        ticks: 300,
+        gravity: 0.6,
+        scalar: 1.5,
+        startVelocity: 30,
+        shapes: ["circle", "square"],
+      });
+      // Trailing sparkles
+      confetti({
+        particleCount: 20,
+        spread: 360,
+        origin: { x, y: 0.3 + Math.random() * 0.2 },
+        colors: ["#ffffff", "#f5c842"],
+        ticks: 200,
+        gravity: 0.4,
+        scalar: 0.8,
+        startVelocity: 15,
+      });
+    }, delay);
+  };
 
-  const shapes: ConfettiShape[] = ["rect", "rect", "circle", "ribbon", "dot"];
-  const falls: ConfettiFall[] = ["fall", "sway", "sway"];
-  const spins: ConfettiSpin[] = ["spin", "flutter", "flutter"];
+  // Staggered fireworks across the screen
+  launchFirework(300, 0.5);
+  launchFirework(800, 0.25);
+  launchFirework(1300, 0.75);
+  launchFirework(2000, 0.4);
+  launchFirework(2600, 0.6);
+  launchFirework(3200, 0.3);
+  launchFirework(3800, 0.7);
+  launchFirework(4500, 0.5);
 
-  return Array.from({ length: count }, (_, i) => {
-    const shape = shapes[Math.floor(rng() * shapes.length)];
-    const fall = falls[Math.floor(rng() * falls.length)];
-    const spin: ConfettiSpin = shape === "dot" ? "shimmer" : spins[Math.floor(rng() * spins.length)];
-    const drift = `${(rng() - 0.5) * 60}px`;
-
-    let w: number, h: number, radius: string;
-    switch (shape) {
-      case "circle":
-        w = h = 5 + Math.floor(rng() * 6);
-        radius = "50%";
-        break;
-      case "ribbon":
-        w = 3 + Math.floor(rng() * 3);
-        h = 14 + Math.floor(rng() * 12);
-        radius = "1px";
-        break;
-      case "dot":
-        w = h = 3 + Math.floor(rng() * 3);
-        radius = "50%";
-        break;
-      default: // rect
-        w = 5 + Math.floor(rng() * 7);
-        h = 8 + Math.floor(rng() * 8);
-        radius = "2px";
-    }
-
-    // First wave (0–2s delay) and second wave (2.5–4.5s delay) for staggered bursts
-    const wave = rng() < 0.6 ? 0 : 2.5;
-    const delay = wave + rng() * 2;
-
-    return {
-      id: i,
-      color: CONFETTI_COLORS[Math.floor(rng() * CONFETTI_COLORS.length)],
-      left: `${rng() * 100}%`,
-      delay: `${delay}s`,
-      duration: `${3.5 + rng() * 3}s`,
-      width: `${w}px`,
-      height: `${h}px`,
-      borderRadius: radius,
-      drift,
-      fallClass: fall === "sway" ? "animate-confetti-sway" : "animate-confetti-fall",
-      spinClass: spin === "shimmer" ? "animate-confetti-shimmer" : spin === "flutter" ? "animate-confetti-flutter" : "animate-confetti-spin",
-      opacity: shape === "dot" ? 0.7 : 0.9,
-    };
-  });
+  // Grand finale — massive center burst
+  setTimeout(() => {
+    confetti({
+      particleCount: 150,
+      spread: 360,
+      origin: { x: 0.5, y: 0.35 },
+      colors: GOLD_COLORS,
+      ticks: 400,
+      gravity: 0.5,
+      scalar: 2,
+      startVelocity: 40,
+      shapes: ["circle", "square"],
+    });
+  }, 5200);
 }
 
 const RANK_MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -163,37 +169,20 @@ function PodiumBlock({
 export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Dashboard", playerResults }: Props) {
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
-  const confetti = useMemo(() => generateConfetti(45), []);
   const myEntry = entries.find((e) => e.player_id === playerId);
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (!firedRef.current) {
+      firedRef.current = true;
+      fireCelebration();
+    }
+  }, []);
   const isChampion = myEntry?.rank === 1;
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-      {/* Confetti */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        {confetti.map((piece) => (
-          <div key={piece.id} className={`absolute top-0 ${piece.fallClass}`}
-            style={{
-              left: piece.left,
-              animationDelay: piece.delay,
-              animationDuration: piece.duration,
-              width: piece.width,
-              height: piece.height,
-              "--drift": piece.drift,
-            } as React.CSSProperties}>
-            <div className={`w-full h-full ${piece.spinClass}`}
-              style={{
-                backgroundColor: piece.color,
-                borderRadius: piece.borderRadius,
-                animationDelay: piece.delay,
-                opacity: piece.opacity,
-              }}
-            />
-          </div>
-        ))}
-      </div>
-
       <div className="ramadan-pattern" />
 
       <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
