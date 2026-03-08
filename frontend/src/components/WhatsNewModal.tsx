@@ -1,28 +1,34 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, LayoutList, ImageIcon, BarChart3, Sparkles } from "lucide-react";
+import { X, Music, PartyPopper, GripVertical, Bug, Sparkles } from "lucide-react";
 
-const CURRENT_VERSION = "1.1.0";
+const CURRENT_VERSION = "1.2.0";
 const STORAGE_KEY = `hilal-whats-new-seen-v${CURRENT_VERSION}`;
 
 const features = [
   {
-    icon: LayoutList,
-    title: "New Question Types",
+    icon: Music,
+    title: "Game Audio",
     description:
-      "True/False, Ordering, and Image-based questions — more ways to challenge your players.",
+      "Lobby music, ticking countdown, reveal stings, and podium celebration — with a mute toggle.",
   },
   {
-    icon: ImageIcon,
-    title: "Image Uploads",
+    icon: PartyPopper,
+    title: "Podium Fireworks",
     description:
-      "Attach images to questions and answer options for richer, more visual quizzes.",
+      "Physics-based confetti and fireworks light up the podium screen.",
   },
   {
-    icon: BarChart3,
-    title: "Analytics Dashboard",
+    icon: GripVertical,
+    title: "Kick Players & Drag-to-Reorder",
     description:
-      "Track quiz performance, player stats, and game trends with interactive charts.",
+      "Remove players from the lobby and enjoy smoother drag-to-reorder for ordering questions.",
+  },
+  {
+    icon: Bug,
+    title: "Bug Fixes",
+    description:
+      "AI true/false answers, MCQ option shuffling, and stale player cleanup.",
   },
 ];
 
