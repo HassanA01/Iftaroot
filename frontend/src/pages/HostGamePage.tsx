@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { ChevronRight, Users, LogOut } from "lucide-react";
+import { ChevronRight, Users, LogOut, Volume2, VolumeOff } from "lucide-react";
 import { CrescentIcon } from "../components/icons";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useGameStore } from "../stores/gameStore";
@@ -10,6 +10,7 @@ import { LeaderboardDisplay } from "../components/LeaderboardDisplay";
 import { PodiumScreen } from "../components/PodiumScreen";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { PrayerArcTransition } from "../components/PrayerArcTransition";
+import { useGameAudio } from "../hooks/useGameAudio";
 import type { WsMessage, LeaderboardEntry, PodiumEntry, AnswerRevealPayload } from "../types";
 
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:8081";
@@ -72,6 +73,7 @@ export function HostGamePage() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [timeLimit, setTimeLimit] = useState(20);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const { muted, toggleMute } = useGameAudio(phase);
 
   useEffect(() => {
     if (phase !== "question" || timeLeft <= 0) return;
@@ -246,6 +248,11 @@ export function HostGamePage() {
             <span className="hidden sm:inline text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>answered</span>
             <span className={`ml-1 w-2 h-2 rounded-full ${wsReady ? "bg-green-400" : "bg-yellow-400"} animate-pulse`} />
           </div>
+          <motion.button onClick={toggleMute} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            className="p-1.5 rounded-lg" aria-label={muted ? "Unmute audio" : "Mute audio"}
+            style={{ background: "rgba(245,200,66,0.12)", color: muted ? "rgba(255,255,255,0.4)" : "#f5c842", border: "1px solid rgba(245,200,66,0.25)" }}>
+            {muted ? <VolumeOff className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </motion.button>
           <motion.button onClick={() => setShowEndConfirm(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold"
             style={{ background: "rgba(244,67,54,0.15)", color: "#f44336", border: "1px solid rgba(244,67,54,0.3)" }}>

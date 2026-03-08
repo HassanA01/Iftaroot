@@ -2,11 +2,12 @@ import { useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { Users, Copy, Check } from "lucide-react";
+import { Users, Copy, Check, X, Volume2, VolumeOff } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { LanternIcon, CrescentIcon } from "../components/icons";
 import { getSessionByCode, listSessionPlayers, startSession } from "../api/sessions";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { useLobbyAudio } from "../hooks/useLobbyAudio";
 import { useGameStore } from "../stores/gameStore";
 import type { WsMessage, GamePlayer } from "../types";
 
@@ -29,6 +30,7 @@ export function HostLobbyPage() {
   const [wsReady, setWsReady] = useState(false);
   const [wsEvents, setWsEvents] = useState<WsPlayerEvent[]>([]);
   const [copied, setCopied] = useState(false);
+  const { muted, toggleMute } = useLobbyAudio();
 
   const { data: session, isError } = useQuery({
     queryKey: ["session-by-code", code],
@@ -72,7 +74,7 @@ export function HostLobbyPage() {
     }
   }, [code, navigate]);
 
-  useWebSocket({
+  const { send } = useWebSocket({
     url: `${WS_BASE}/api/v1/ws/host/${code}`,
     onMessage: handleMessage,
     onOpen: () => setWsReady(true),
@@ -95,6 +97,10 @@ export function HostLobbyPage() {
     });
   }
 
+  function handleKick(playerId: string) {
+    send({ type: "kick_player", payload: { player_id: playerId } });
+  }
+
   if (isError) {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
@@ -111,6 +117,13 @@ export function HostLobbyPage() {
       <div className="ramadan-pattern" />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center px-4 sm:px-6 py-8 sm:py-12 max-w-2xl mx-auto">
+        {/* Mute toggle */}
+        <motion.button onClick={toggleMute} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+          className="absolute top-4 right-4 p-2 rounded-lg z-20" aria-label={muted ? "Unmute audio" : "Mute audio"}
+          style={{ background: "rgba(245,200,66,0.12)", color: muted ? "rgba(255,255,255,0.4)" : "#f5c842", border: "1px solid rgba(245,200,66,0.25)" }}>
+          {muted ? <VolumeOff className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+        </motion.button>
+
         {/* Animated lanterns */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-32">
           {[{ delay: 0 }, { delay: 0.5 }].map((l, i) => (
@@ -201,7 +214,17 @@ export function HostLobbyPage() {
                     style={{ background: PLAYER_COLORS[i % PLAYER_COLORS.length] }}>
                     {player.name[0]?.toUpperCase()}
                   </div>
-                  <span className="font-medium text-white">{player.name}</span>
+                  <span className="font-medium text-white flex-1">{player.name}</span>
+                  <motion.button
+                    onClick={() => handleKick(player.id)}
+                    className="p-1.5 rounded-lg opacity-30 hover:opacity-100 transition-opacity"
+                    style={{ color: "#f44336" }}
+                    whileHover={{ scale: 1.1, backgroundColor: "rgba(244,67,54,0.15)" }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label={`Kick ${player.name}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </motion.button>
                 </motion.div>
               ))}
             </motion.div>
