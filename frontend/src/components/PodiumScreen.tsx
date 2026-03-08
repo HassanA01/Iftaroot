@@ -13,24 +13,87 @@ interface Props {
 }
 
 // Deterministic confetti (stable across renders)
-const CONFETTI_COLORS = ["#f5c842", "#ff6b35", "#4caf50", "#2196f3", "#f44336", "#9c27b0", "#ec4899"];
+// Gold-dominant palette with warm accents — cohesive with Hilal theme
+const CONFETTI_COLORS = [
+  "#f5c842", "#f5c842", "#ffd700", "#daa520",  // golds (weighted)
+  "#fff8dc", "#e8d5b7",                         // cream / sand
+  "#ff6b35",                                     // warm accent
+  "#cd7f32",                                     // bronze
+];
+
+type ConfettiShape = "rect" | "circle" | "ribbon" | "dot";
+type ConfettiFall = "fall" | "sway";
+type ConfettiSpin = "spin" | "flutter" | "shimmer";
 
 interface ConfettiPiece {
-  id: number; color: string; left: string; delay: string; duration: string; width: string; height: string;
+  id: number;
+  color: string;
+  left: string;
+  delay: string;
+  duration: string;
+  width: string;
+  height: string;
+  borderRadius: string;
+  drift: string;
+  fallClass: string;
+  spinClass: string;
+  opacity: number;
 }
 
 function generateConfetti(count: number): ConfettiPiece[] {
   let seed = 42;
   const rng = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return ((seed >>> 0) / 0xffffffff) % 1; };
-  return Array.from({ length: count }, (_, i) => ({
-    id: i,
-    color: CONFETTI_COLORS[Math.floor(rng() * CONFETTI_COLORS.length)],
-    left: `${rng() * 100}%`,
-    delay: `${rng() * 3}s`,
-    duration: `${2.5 + rng() * 2}s`,
-    width: `${6 + Math.floor(rng() * 8)}px`,
-    height: `${10 + Math.floor(rng() * 8)}px`,
-  }));
+
+  const shapes: ConfettiShape[] = ["rect", "rect", "circle", "ribbon", "dot"];
+  const falls: ConfettiFall[] = ["fall", "sway", "sway"];
+  const spins: ConfettiSpin[] = ["spin", "flutter", "flutter"];
+
+  return Array.from({ length: count }, (_, i) => {
+    const shape = shapes[Math.floor(rng() * shapes.length)];
+    const fall = falls[Math.floor(rng() * falls.length)];
+    const spin: ConfettiSpin = shape === "dot" ? "shimmer" : spins[Math.floor(rng() * spins.length)];
+    const drift = `${(rng() - 0.5) * 60}px`;
+
+    let w: number, h: number, radius: string;
+    switch (shape) {
+      case "circle":
+        w = h = 5 + Math.floor(rng() * 6);
+        radius = "50%";
+        break;
+      case "ribbon":
+        w = 3 + Math.floor(rng() * 3);
+        h = 14 + Math.floor(rng() * 12);
+        radius = "1px";
+        break;
+      case "dot":
+        w = h = 3 + Math.floor(rng() * 3);
+        radius = "50%";
+        break;
+      default: // rect
+        w = 5 + Math.floor(rng() * 7);
+        h = 8 + Math.floor(rng() * 8);
+        radius = "2px";
+    }
+
+    // First wave (0–2s delay) and second wave (2.5–4.5s delay) for staggered bursts
+    const wave = rng() < 0.6 ? 0 : 2.5;
+    const delay = wave + rng() * 2;
+
+    return {
+      id: i,
+      color: CONFETTI_COLORS[Math.floor(rng() * CONFETTI_COLORS.length)],
+      left: `${rng() * 100}%`,
+      delay: `${delay}s`,
+      duration: `${3.5 + rng() * 3}s`,
+      width: `${w}px`,
+      height: `${h}px`,
+      borderRadius: radius,
+      drift,
+      fallClass: fall === "sway" ? "animate-confetti-sway" : "animate-confetti-fall",
+      spinClass: spin === "shimmer" ? "animate-confetti-shimmer" : spin === "flutter" ? "animate-confetti-flutter" : "animate-confetti-spin",
+      opacity: shape === "dot" ? 0.7 : 0.9,
+    };
+  });
 }
 
 const RANK_MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -100,7 +163,7 @@ function PodiumBlock({
 export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Dashboard", playerResults }: Props) {
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
-  const confetti = useMemo(() => generateConfetti(30), []);
+  const confetti = useMemo(() => generateConfetti(45), []);
   const myEntry = entries.find((e) => e.player_id === playerId);
   const isChampion = myEntry?.rank === 1;
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -110,9 +173,23 @@ export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Das
       {/* Confetti */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         {confetti.map((piece) => (
-          <div key={piece.id} className="absolute top-0 animate-confetti-fall"
-            style={{ left: piece.left, animationDelay: piece.delay, animationDuration: piece.duration, width: piece.width, height: piece.height }}>
-            <div className="w-full h-full animate-confetti-spin" style={{ backgroundColor: piece.color, animationDelay: piece.delay }} />
+          <div key={piece.id} className={`absolute top-0 ${piece.fallClass}`}
+            style={{
+              left: piece.left,
+              animationDelay: piece.delay,
+              animationDuration: piece.duration,
+              width: piece.width,
+              height: piece.height,
+              "--drift": piece.drift,
+            } as React.CSSProperties}>
+            <div className={`w-full h-full ${piece.spinClass}`}
+              style={{
+                backgroundColor: piece.color,
+                borderRadius: piece.borderRadius,
+                animationDelay: piece.delay,
+                opacity: piece.opacity,
+              }}
+            />
           </div>
         ))}
       </div>
