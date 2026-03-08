@@ -70,8 +70,8 @@ describe("useGameAudio", () => {
 
     const podium = audioInstances[2];
     expect(podium.play).toHaveBeenCalled();
-    expect(podium.loop).toBe(false);
-    expect(podium.volume).toBe(0.5);
+    expect(podium.loop).toBe(true);
+    expect(podium.volume).toBe(0.3);
   });
 
   it("does not replay reveal sting on re-render with same phase", () => {

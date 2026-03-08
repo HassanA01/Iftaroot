@@ -98,7 +98,7 @@ export function useGameAudio(phase: GamePhase) {
         fadeOut(loop);
         if (!playedPodiumRef.current) {
           playedPodiumRef.current = true;
-          playAudio(podium, STING_VOLUME, false);
+          playAudio(podium, LOOP_VOLUME, true);
         }
         break;
       default:
