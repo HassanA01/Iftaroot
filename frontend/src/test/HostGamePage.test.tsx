@@ -14,6 +14,10 @@ vi.mock("../hooks/useWebSocket", () => ({
   },
 }));
 
+vi.mock("../hooks/useGameAudio", () => ({
+  useGameAudio: () => ({ muted: false, toggleMute: vi.fn() }),
+}));
+
 function renderHostGame(code = "123456") {
   return render(
     <MemoryRouter initialEntries={[`/admin/game/${code}`]}>
