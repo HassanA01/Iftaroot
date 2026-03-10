@@ -141,11 +141,9 @@ describe("GenerateQuizModal", () => {
   it("renders question type chips with all active by default", () => {
     renderWithProviders(<GenerateQuizModal {...defaultProps} />);
     const mcChip = screen.getByRole("button", { name: "Multiple Choice" });
-    const msChip = screen.getByRole("button", { name: "Multi Select" });
     const tfChip = screen.getByRole("button", { name: "True / False" });
     const ordChip = screen.getByRole("button", { name: "Ordering" });
     expect(mcChip).toHaveAttribute("aria-pressed", "true");
-    expect(msChip).toHaveAttribute("aria-pressed", "true");
     expect(tfChip).toHaveAttribute("aria-pressed", "true");
     expect(ordChip).toHaveAttribute("aria-pressed", "true");
   });
@@ -160,10 +158,9 @@ describe("GenerateQuizModal", () => {
 
   it("cannot deselect the last active question type chip", async () => {
     renderWithProviders(<GenerateQuizModal {...defaultProps} />);
-    // Deselect three of the four
+    // Deselect two of the three
     await userEvent.click(screen.getByRole("button", { name: "True / False" }));
     await userEvent.click(screen.getByRole("button", { name: "Ordering" }));
-    await userEvent.click(screen.getByRole("button", { name: "Multi Select" }));
     // Only MC left — clicking it should have no effect
     const mcChip = screen.getByRole("button", { name: "Multiple Choice" });
     expect(mcChip).toHaveAttribute("aria-pressed", "true");
@@ -175,7 +172,6 @@ describe("GenerateQuizModal", () => {
     renderWithProviders(<GenerateQuizModal {...defaultProps} />);
     await userEvent.click(screen.getByRole("button", { name: "Upload Document" }));
     expect(screen.getByRole("button", { name: "Multiple Choice" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Multi Select" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "True / False" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ordering" })).toBeInTheDocument();
   });

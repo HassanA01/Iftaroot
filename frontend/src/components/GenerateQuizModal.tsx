@@ -31,7 +31,6 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
   const [loadingStep, setLoadingStep] = useState("");
   const [questionTypes, setQuestionTypes] = useState<Record<string, boolean>>({
     multiple_choice: true,
-    multi_select: true,
     true_false: true,
     ordering: true,
   });
@@ -152,7 +151,6 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
 
   const TYPE_LABELS: Record<string, string> = {
     multiple_choice: "Multiple Choice",
-    multi_select: "Multi Select",
     true_false: "True / False",
     ordering: "Ordering",
   };
