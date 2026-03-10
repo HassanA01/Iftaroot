@@ -1,7 +1,9 @@
 import { useState, useRef, type FormEvent } from "react";
 import { motion } from "motion/react";
+import { useQuery } from "@tanstack/react-query";
 import { Sparkles, X, Upload, FileText, Trash2 } from "lucide-react";
 import { generateQuiz, generateQuizFromUpload, type GenerateQuizResponse } from "../api/ai";
+import { fetchAppConfig } from "../api/config";
 
 interface Props {
   onClose: () => void;
@@ -29,10 +31,18 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
   const [loadingStep, setLoadingStep] = useState("");
   const [questionTypes, setQuestionTypes] = useState<Record<string, boolean>>({
     multiple_choice: true,
+    multi_select: true,
     true_false: true,
     ordering: true,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: appConfig } = useQuery({
+    queryKey: ["appConfig"],
+    queryFn: fetchAppConfig,
+    staleTime: 5 * 60 * 1000,
+  });
+  const maxQuestions = appConfig?.max_ai_questions ?? 20;
 
   const activeTypes = Object.keys(questionTypes).filter((k) => questionTypes[k]);
 
@@ -48,7 +58,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
     color: "white",
   };
 
-  const countInvalid = count < 1 || count > 10;
+  const countInvalid = count < 1 || count > maxQuestions;
 
   function validateFile(selected: File): boolean {
     setFileError(null);
@@ -101,7 +111,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
   async function handleTopicSubmit(e: FormEvent) {
     e.preventDefault();
     if (countInvalid) {
-      setError("Maximum 10 questions for AI generation.");
+      setError(`Maximum ${maxQuestions} questions for AI generation.`);
       return;
     }
     setError(null);
@@ -121,7 +131,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
   async function handleUploadSubmit(e: FormEvent) {
     e.preventDefault();
     if (!file) { setError("Please select a file."); return; }
-    if (countInvalid) { setError("Maximum 10 questions for AI generation."); return; }
+    if (countInvalid) { setError(`Maximum ${maxQuestions} questions for AI generation.`); return; }
     setError(null);
     setLoading(true);
     setLoadingStep("Extracting text from document...");
@@ -142,6 +152,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
 
   const TYPE_LABELS: Record<string, string> = {
     multiple_choice: "Multiple Choice",
+    multi_select: "Multi Select",
     true_false: "True / False",
     ordering: "Ordering",
   };
@@ -273,7 +284,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
                     <input
                       type="number"
                       min={1}
-                      max={10}
+                      max={maxQuestions}
                       value={count}
                       onChange={(e) => setCount(Number(e.target.value))}
                       className="w-full rounded-xl px-4 py-3 text-sm outline-none transition"
@@ -286,7 +297,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
                     />
                     {countInvalid && (
                       <p className="text-xs mt-1" style={{ color: "#f44336" }}>
-                        Maximum 10 questions for AI generation.
+                        Maximum {maxQuestions} questions for AI generation.
                       </p>
                     )}
                   </div>
@@ -406,7 +417,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
                     <input
                       type="number"
                       min={1}
-                      max={10}
+                      max={maxQuestions}
                       value={count}
                       onChange={(e) => setCount(Number(e.target.value))}
                       className="w-full rounded-xl px-4 py-3 text-sm outline-none transition"
@@ -419,7 +430,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
                     />
                     {countInvalid && (
                       <p className="text-xs mt-1" style={{ color: "#f44336" }}>
-                        Maximum 10 questions for AI generation.
+                        Maximum {maxQuestions} questions for AI generation.
                       </p>
                     )}
                   </div>

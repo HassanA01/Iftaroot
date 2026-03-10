@@ -23,11 +23,16 @@ import (
 	"github.com/HassanA01/Hilal/backend/internal/models"
 )
 
-// maxAIQuestions is the hard cap on AI-generated question count.
-const maxAIQuestions = 10
+// maxAIQuestions returns the configured cap on AI-generated question count.
+func (h *Handler) maxAIQuestions() int {
+	if h.config.MaxAIQuestions > 0 {
+		return h.config.MaxAIQuestions
+	}
+	return 20
+}
 
 // allAIQuestionTypes is the set of question types the AI can generate.
-var allAIQuestionTypes = []string{"multiple_choice", "true_false", "ordering"}
+var allAIQuestionTypes = []string{"multiple_choice", "multi_select", "true_false", "ordering"}
 
 type generateQuizRequest struct {
 	Topic             string   `json:"topic"`
@@ -42,7 +47,7 @@ func validateQuestionTypes(types []string) ([]string, string) {
 	if len(types) == 0 {
 		return allAIQuestionTypes, ""
 	}
-	valid := map[string]bool{"multiple_choice": true, "true_false": true, "ordering": true}
+	valid := map[string]bool{"multiple_choice": true, "multi_select": true, "true_false": true, "ordering": true}
 	seen := map[string]bool{}
 	var out []string
 	for _, t := range types {
@@ -92,8 +97,8 @@ func (h *Handler) GenerateQuiz(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "context contains invalid characters")
 		return
 	}
-	if req.QuestionCount < 1 || req.QuestionCount > maxAIQuestions {
-		writeError(w, http.StatusBadRequest, "question_count must be between 1 and "+strconv.Itoa(maxAIQuestions))
+	if req.QuestionCount < 1 || req.QuestionCount > h.maxAIQuestions() {
+		writeError(w, http.StatusBadRequest, "question_count must be between 1 and "+strconv.Itoa(h.maxAIQuestions()))
 		return
 	}
 	allowedTypes, errMsg := validateQuestionTypes(req.QuestionTypes)
@@ -142,8 +147,8 @@ func (h *Handler) GenerateQuizFromUpload(w http.ResponseWriter, r *http.Request)
 
 	// 2. Get question_count from form field
 	questionCount, err := strconv.Atoi(r.FormValue("question_count"))
-	if err != nil || questionCount < 1 || questionCount > maxAIQuestions {
-		writeError(w, http.StatusBadRequest, "question_count must be between 1 and "+strconv.Itoa(maxAIQuestions))
+	if err != nil || questionCount < 1 || questionCount > h.maxAIQuestions() {
+		writeError(w, http.StatusBadRequest, "question_count must be between 1 and "+strconv.Itoa(h.maxAIQuestions()))
 		return
 	}
 
@@ -244,7 +249,9 @@ func (h *Handler) generateQuizFromText(w http.ResponseWriter, r *http.Request, g
 	for _, t := range allowedTypes {
 		switch t {
 		case "multiple_choice":
-			typeDescParts = append(typeDescParts, "multiple_choice (4 options, 1 correct)")
+			typeDescParts = append(typeDescParts, "multiple_choice (4 options, exactly 1 correct)")
+		case "multi_select":
+			typeDescParts = append(typeDescParts, "multi_select (4 options, 2 or 3 correct — select all that apply)")
 		case "true_false":
 			typeDescParts = append(typeDescParts, "true_false (2 options: True/False, 1 correct)")
 		case "ordering":
@@ -285,7 +292,7 @@ func (h *Handler) generateQuizFromText(w http.ResponseWriter, r *http.Request, g
 						},
 						"options": map[string]any{
 							"type":        "array",
-							"description": "Answer options. For multiple_choice: exactly 4 with is_correct. For true_false: exactly 2 (True/False) with is_correct. For ordering: 3-6 items in correct order (no is_correct).",
+							"description": "Answer options. For multiple_choice: exactly 4, 1 is_correct. For multi_select: exactly 4, 2-3 is_correct. For true_false: exactly 2 (True/False), 1 is_correct. For ordering: 3-6 items in correct order (no is_correct).",
 							"minItems":    2,
 							"maxItems":    6,
 							"items": map[string]any{
@@ -322,6 +329,8 @@ func (h *Handler) generateQuizFromText(w http.ResponseWriter, r *http.Request, g
 	}
 	for _, t := range allowedTypes {
 		switch t {
+		case "multi_select":
+			systemPrompt += "For multi_select questions, create 'select all that apply' questions with exactly 2 or 3 correct answers out of 4 options. "
 		case "ordering":
 			systemPrompt += "For ordering questions, list items in the CORRECT order — they will be shuffled for the player. "
 		case "true_false":

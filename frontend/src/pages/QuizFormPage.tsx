@@ -35,6 +35,11 @@ function blankQuestion(type: QuestionType = "multiple_choice"): QuestionDraft {
         text: "", type, time_limit: 20,
         options: [{ text: "True", is_correct: true }, { text: "False", is_correct: false }],
       };
+    case "multi_select":
+      return {
+        text: "", type, time_limit: 20,
+        options: [blankOption(), blankOption(), blankOption(), blankOption()],
+      };
     case "ordering":
       return {
         text: "", type, time_limit: 30,
@@ -58,6 +63,7 @@ const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 const TYPE_LABELS: Record<QuestionType, string> = {
   multiple_choice: "Multiple Choice",
+  multi_select: "Multi Select",
   true_false: "True / False",
   image_choice: "Image Choice",
   ordering: "Ordering",
@@ -109,6 +115,12 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
             return `Question ${i + 1} must have 2–4 options.`;
           if (q.options.filter((o) => o.is_correct).length !== 1)
             return `Question ${i + 1} must have exactly one correct option.`;
+          break;
+        case "multi_select":
+          if (q.options.length < 2 || q.options.length > 4)
+            return `Question ${i + 1} must have 2–4 options.`;
+          if (q.options.filter((o) => o.is_correct).length < 2)
+            return `Question ${i + 1} must have at least 2 correct options.`;
           break;
         case "true_false":
           if (q.options.length !== 2)
@@ -172,9 +184,15 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
     ));
   }
   function setCorrect(qIdx: number, oIdx: number) {
-    setQuestions((qs) => qs.map((q, i) =>
-      i !== qIdx ? q : { ...q, options: q.options.map((o, j) => ({ ...o, is_correct: j === oIdx })) }
-    ));
+    setQuestions((qs) => qs.map((q, i) => {
+      if (i !== qIdx) return q;
+      if (q.type === "multi_select") {
+        // Toggle: checkbox style
+        return { ...q, options: q.options.map((o, j) => j === oIdx ? { ...o, is_correct: !o.is_correct } : o) };
+      }
+      // Radio: exactly one correct
+      return { ...q, options: q.options.map((o, j) => ({ ...o, is_correct: j === oIdx })) };
+    }));
   }
   function addOption(qIdx: number) {
     setQuestions((qs) => qs.map((q, i) => (i !== qIdx ? q : { ...q, options: [...q.options, blankOption()] })));
