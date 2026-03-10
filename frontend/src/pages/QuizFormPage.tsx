@@ -58,6 +58,17 @@ function blankQuestion(type: QuestionType = "multiple_choice"): QuestionDraft {
   }
 }
 
+function isValidImageUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  if (url.startsWith("data:image/")) return true;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 const OPTION_COLORS = ["#4caf50", "#2196f3", "#ff6b35", "#f44336"];
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
@@ -87,6 +98,7 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
   const [showAIModal, setShowAIModal] = useState(false);
   const [uploadingQuestion, setUploadingQuestion] = useState<number | null>(null);
   const [uploadingOption, setUploadingOption] = useState<{ q: number; o: number } | null>(null);
+  const [invalidImageUrls, setInvalidImageUrls] = useState<Set<string>>(new Set());
 
   const mutation = useMutation({
     mutationFn: (input: { title: string; questions: QuestionInput[] }) =>
@@ -300,43 +312,56 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
                   placeholder={isOrdering ? `Item ${oIdx + 1}` : `Option ${oIdx + 1}`}
                 />
                 {isImage && (
-                  <div className="flex items-center gap-1">
-                    {o.image_url ? (
-                      <div className="flex items-center gap-1.5 flex-1 rounded-lg px-1.5 py-0.5" style={{ background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.2)" }}>
-                        <img src={o.image_url} alt="Preview" className="w-7 h-7 rounded object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                        <span className="text-[10px] truncate flex-1" style={{ color: "rgba(255,255,255,0.5)" }}>Image</span>
-                        <button type="button" onClick={() => updateOption(qIdx, oIdx, { image_url: "" })} className="p-0.5 rounded transition hover:bg-white/10 shrink-0" title="Remove image">
-                          <X className="w-3 h-3" style={{ color: "rgba(255,255,255,0.4)" }} />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <label className="cursor-pointer shrink-0" title="Upload image">
-                          {uploadingOption?.q === qIdx && uploadingOption?.o === oIdx ? (
-                            <Loader2 className="w-3 h-3 animate-spin" style={{ color: "#f5c842" }} />
-                          ) : (
-                            <Image className="w-3 h-3" style={{ color: "rgba(255,255,255,0.4)" }} />
-                          )}
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1">
+                      {isValidImageUrl(o.image_url) ? (
+                        <div className="flex items-center gap-1.5 flex-1 rounded-lg px-1.5 py-0.5" style={{ background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.2)" }}>
+                          <img src={o.image_url} alt="Preview" className="w-7 h-7 rounded object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                          <span className="text-[10px] truncate flex-1" style={{ color: "rgba(255,255,255,0.5)" }}>Image</span>
+                          <button type="button" onClick={() => { updateOption(qIdx, oIdx, { image_url: "" }); setInvalidImageUrls((prev) => { const next = new Set(prev); next.delete(`q${qIdx}o${oIdx}`); return next; }); }} className="p-0.5 rounded transition hover:bg-white/10 shrink-0" title="Remove image">
+                            <X className="w-3 h-3" style={{ color: "rgba(255,255,255,0.4)" }} />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <label className="cursor-pointer shrink-0" title="Upload image">
+                            {uploadingOption?.q === qIdx && uploadingOption?.o === oIdx ? (
+                              <Loader2 className="w-3 h-3 animate-spin" style={{ color: "#f5c842" }} />
+                            ) : (
+                              <Image className="w-3 h-3" style={{ color: "rgba(255,255,255,0.4)" }} />
+                            )}
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleOptionImageUpload(qIdx, oIdx, f);
+                                e.target.value = "";
+                              }}
+                            />
+                          </label>
                           <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp,image/gif"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) handleOptionImageUpload(qIdx, oIdx, f);
-                              e.target.value = "";
+                            type="text"
+                            value={o.image_url ?? ""}
+                            onChange={(e) => { updateOption(qIdx, oIdx, { image_url: e.target.value }); setInvalidImageUrls((prev) => { const next = new Set(prev); next.delete(`q${qIdx}o${oIdx}`); return next; }); }}
+                            onBlur={() => {
+                              const val = o.image_url ?? "";
+                              if (val && !isValidImageUrl(val)) {
+                                setInvalidImageUrls((prev) => new Set(prev).add(`q${qIdx}o${oIdx}`));
+                              } else {
+                                setInvalidImageUrls((prev) => { const next = new Set(prev); next.delete(`q${qIdx}o${oIdx}`); return next; });
+                              }
                             }}
+                            className="w-full rounded-lg px-2 py-1 text-xs outline-none transition"
+                            style={{ ...inputStyle, borderColor: invalidImageUrls.has(`q${qIdx}o${oIdx}`) ? "#f44336" : undefined }}
+                            placeholder="Image URL"
                           />
-                        </label>
-                        <input
-                          type="url"
-                          value={o.image_url ?? ""}
-                          onChange={(e) => updateOption(qIdx, oIdx, { image_url: e.target.value })}
-                          className="w-full rounded-lg px-2 py-1 text-xs outline-none transition"
-                          style={inputStyle}
-                          placeholder="Image URL"
-                        />
-                      </>
+                        </>
+                      )}
+                    </div>
+                    {invalidImageUrls.has(`q${qIdx}o${oIdx}`) && (
+                      <p className="text-[10px] ml-4" style={{ color: "#f44336" }}>Please enter a valid image URL</p>
                     )}
                   </div>
                 )}
@@ -485,43 +510,56 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
                 placeholder={q.type === "ordering" ? "e.g. Arrange these events in chronological order" : "Question text"}
               />
 
-              <div className="flex items-center gap-2">
-                {q.image_url ? (
-                  <div className="flex items-center gap-2 flex-1 rounded-lg px-2 py-1" style={{ background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.2)" }}>
-                    <img src={q.image_url} alt="Preview" className="w-10 h-10 rounded object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                    <span className="text-xs truncate flex-1" style={{ color: "rgba(255,255,255,0.5)" }}>Image attached</span>
-                    <button type="button" onClick={() => updateQuestion(qIdx, { image_url: "" })} className="p-1 rounded transition hover:bg-white/10 shrink-0" title="Remove image">
-                      <X className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.4)" }} />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <label className="cursor-pointer shrink-0 p-1 rounded-lg transition hover:bg-white/10" title="Upload image">
-                      {uploadingQuestion === qIdx ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: "#f5c842" }} />
-                      ) : (
-                        <Image className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.4)" }} />
-                      )}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  {isValidImageUrl(q.image_url) ? (
+                    <div className="flex items-center gap-2 flex-1 rounded-lg px-2 py-1" style={{ background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.2)" }}>
+                      <img src={q.image_url} alt="Preview" className="w-10 h-10 rounded object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      <span className="text-xs truncate flex-1" style={{ color: "rgba(255,255,255,0.5)" }}>Image attached</span>
+                      <button type="button" onClick={() => { updateQuestion(qIdx, { image_url: "" }); setInvalidImageUrls((prev) => { const next = new Set(prev); next.delete(`q${qIdx}`); return next; }); }} className="p-1 rounded transition hover:bg-white/10 shrink-0" title="Remove image">
+                        <X className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.4)" }} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="cursor-pointer shrink-0 p-1 rounded-lg transition hover:bg-white/10" title="Upload image">
+                        {uploadingQuestion === qIdx ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: "#f5c842" }} />
+                        ) : (
+                          <Image className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.4)" }} />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleImageUpload(qIdx, f);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
                       <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) handleImageUpload(qIdx, f);
-                          e.target.value = "";
+                        type="text"
+                        value={q.image_url ?? ""}
+                        onChange={(e) => { updateQuestion(qIdx, { image_url: e.target.value }); setInvalidImageUrls((prev) => { const next = new Set(prev); next.delete(`q${qIdx}`); return next; }); }}
+                        onBlur={() => {
+                          const val = q.image_url ?? "";
+                          if (val && !isValidImageUrl(val)) {
+                            setInvalidImageUrls((prev) => new Set(prev).add(`q${qIdx}`));
+                          } else {
+                            setInvalidImageUrls((prev) => { const next = new Set(prev); next.delete(`q${qIdx}`); return next; });
+                          }
                         }}
+                        className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none transition"
+                        style={{ ...inputStyle, borderColor: invalidImageUrls.has(`q${qIdx}`) ? "#f44336" : undefined }}
+                        placeholder="Question image URL (optional)"
                       />
-                    </label>
-                    <input
-                      type="url"
-                      value={q.image_url ?? ""}
-                      onChange={(e) => updateQuestion(qIdx, { image_url: e.target.value })}
-                      className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none transition"
-                      style={inputStyle}
-                      placeholder="Question image URL (optional)"
-                    />
-                  </>
+                    </>
+                  )}
+                </div>
+                {invalidImageUrls.has(`q${qIdx}`) && (
+                  <p className="text-[10px] ml-8" style={{ color: "#f44336" }}>Please enter a valid image URL</p>
                 )}
               </div>
 
