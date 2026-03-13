@@ -218,7 +218,7 @@ describe("HostGamePage", () => {
       }),
     );
     expect(screen.getByText("Arrange these events in order")).toBeInTheDocument();
-    expect(screen.getByText("Correct Order")).toBeInTheDocument();
+    expect(screen.getByText("Answer Options")).toBeInTheDocument();
     expect(screen.getByText("Event A")).toBeInTheDocument();
     expect(screen.getByText("Ordering")).toBeInTheDocument();
   });

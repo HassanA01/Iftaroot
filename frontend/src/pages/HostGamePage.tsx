@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { ChevronRight, Users, LogOut, Volume2, VolumeOff } from "lucide-react";
 import { CrescentIcon } from "../components/icons";
 import { useWebSocket } from "../hooks/useWebSocket";
@@ -48,6 +48,88 @@ const TYPE_LABELS: Record<string, string> = {
   image_choice: "Image Choice",
   ordering: "Ordering",
 };
+
+/** Deterministic shuffle using a simple hash of the questionId as seed. */
+function seededShuffle<T>(arr: T[], seed: string): T[] {
+  const copy = [...arr];
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = ((h << 5) - h + seed.charCodeAt(i)) | 0;
+  for (let i = copy.length - 1; i > 0; i--) {
+    h = (h * 1664525 + 1013904223) | 0;
+    const j = ((h >>> 0) % (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function useDelayedFlag(active: boolean, delayMs: number, resetKey: string): boolean {
+  const [flag, setFlag] = useState(false);
+  useEffect(() => {
+    if (!active) { setFlag(false); return; }
+    const timer = setTimeout(() => setFlag(true), delayMs);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, delayMs, resetKey]);
+  return flag;
+}
+
+function OrderingReveal({ options, questionId, revealed, correctOrder }: {
+  options: HostOption[];
+  questionId: string;
+  revealed: boolean;
+  correctOrder?: string[];
+}) {
+  const shuffled = useMemo(() => seededShuffle(options, questionId), [options, questionId]);
+  const settled = useDelayedFlag(revealed, 700, questionId);
+
+  // During question: shuffled order. On reveal: correct order.
+  const displayOptions = revealed && correctOrder
+    ? correctOrder.map((id) => options.find((o) => o.id === id)!).filter(Boolean)
+    : shuffled;
+
+  return (
+    <LayoutGroup>
+      {displayOptions.map((opt, i) => (
+        <motion.div
+          key={opt.id}
+          layout
+          className="flex items-center gap-3 px-4 py-3 rounded-xl"
+          style={{
+            background: settled ? "rgba(76,175,80,0.15)" : "rgba(255,255,255,0.08)",
+            border: `1px solid ${settled ? "rgba(76,175,80,0.3)" : "rgba(245,200,66,0.2)"}`,
+            transition: "background 0.4s ease, border-color 0.4s ease",
+          }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        >
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 text-sm"
+            style={{
+              background: settled ? "#4caf50" : "rgba(245,200,66,0.3)",
+              color: settled ? "white" : "#f5c842",
+              transition: "background 0.4s ease, color 0.4s ease",
+            }}
+          >
+            {revealed ? i + 1 : "•"}
+          </div>
+          <span className="font-medium text-white flex-1 text-sm leading-snug">{opt.text}</span>
+          <AnimatePresence>
+            {settled && (
+              <motion.span
+                className="text-xl font-black shrink-0"
+                style={{ color: "#4caf50" }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 300, delay: i * 0.08 }}
+              >
+                &#x2713;
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      ))}
+    </LayoutGroup>
+  );
+}
 
 export function HostGamePage() {
   const { code } = useParams<{ code: string }>();
@@ -355,7 +437,7 @@ export function HostGamePage() {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold" style={{ color: "rgba(255,255,255,0.8)" }}>
-                {isOrdering ? "Correct Order" : "Answer Options"}
+                {isOrdering && phase === "reveal" ? "Correct Order" : "Answer Options"}
               </h3>
               {phase === "reveal" && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(76,175,80,0.2)", color: "#4caf50" }}>Revealed</span>
@@ -363,31 +445,12 @@ export function HostGamePage() {
             </div>
 
             {isOrdering ? (
-              /* ── Ordering options (shown in correct order for host) ── */
-              currentQuestion.question.options.map((opt, i) => {
-                const revealed = phase === "reveal";
-                return (
-                  <motion.div key={opt.id}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                    style={{
-                      background: revealed ? "rgba(76,175,80,0.15)" : "rgba(255,255,255,0.08)",
-                      border: `1px solid ${revealed ? "rgba(76,175,80,0.3)" : "rgba(245,200,66,0.2)"}`,
-                    }}
-                    initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}>
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white shrink-0 text-sm"
-                      style={{ background: revealed ? "#4caf50" : "rgba(245,200,66,0.3)", color: revealed ? "white" : "#f5c842" }}>
-                      {i + 1}
-                    </div>
-                    <span className="font-medium text-white flex-1 text-sm leading-snug">{opt.text}</span>
-                    {revealed && (
-                      <motion.span className="text-xl font-black shrink-0" style={{ color: "#4caf50" }}
-                        initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300 }}>
-                        &#x2713;
-                      </motion.span>
-                    )}
-                  </motion.div>
-                );
-              })
+              <OrderingReveal
+                options={currentQuestion.question.options}
+                questionId={currentQuestion.question.id}
+                revealed={phase === "reveal"}
+                correctOrder={revealPayload?.correct_order}
+              />
             ) : (
               /* ── MC / TF / Image Choice options ── */
               currentQuestion.question.options.map((opt, i) => {
