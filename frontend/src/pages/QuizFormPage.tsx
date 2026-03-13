@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, Reorder } from "motion/react";
-import { Plus, Trash2, Check, Sparkles, ArrowUp, ArrowDown, Image, Loader2, X, GripVertical } from "lucide-react";
+import { Plus, Trash2, Check, Sparkles, ArrowUp, ArrowDown, Image, Loader2, X, GripVertical, Copy } from "lucide-react";
 import { CrescentIcon } from "../components/icons";
 import { getQuiz, createQuiz, updateQuiz } from "../api/quizzes";
 import type { Quiz, QuestionType } from "../types";
@@ -101,6 +101,36 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
   const [uploadingQuestion, setUploadingQuestion] = useState<number | null>(null);
   const [uploadingOption, setUploadingOption] = useState<{ q: number; o: number } | null>(null);
   const [invalidImageUrls, setInvalidImageUrls] = useState<Set<string>>(new Set());
+  const [copied, setCopied] = useState(false);
+
+  function copyQuestions() {
+    const TYPE_LABELS: Record<string, string> = {
+      multiple_choice: "Multiple Choice",
+      multi_select: "Multi Select",
+      true_false: "True/False",
+      ordering: "Ordering",
+      image_choice: "Image Choice",
+    };
+    const lines: string[] = [];
+    if (title.trim()) lines.push(`Quiz: ${title.trim()}`, "");
+    questions.forEach((q, i) => {
+      const label = TYPE_LABELS[q.type] ?? q.type;
+      lines.push(`${i + 1}. ${q.text || "(no text)"} (${label}, ${q.time_limit}s)`);
+      q.options.forEach((o, j) => {
+        if (q.type === "ordering") {
+          lines.push(`   ${j + 1}. ${o.text || "(no text)"}`);
+        } else {
+          const marker = o.is_correct ? " \u2713" : "";
+          lines.push(`   ${String.fromCharCode(65 + j)}) ${o.text || "(no text)"}${marker}`);
+        }
+      });
+      lines.push("");
+    });
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   const mutation = useMutation({
     mutationFn: (input: { title: string; questions: QuestionInput[] }) =>
@@ -618,6 +648,13 @@ function QuizForm({ quizID, initial }: QuizFormProps) {
             whileHover={!mutation.isPending ? { scale: 1.02 } : {}}
             whileTap={!mutation.isPending ? { scale: 0.98 } : {}}>
             {mutation.isPending ? "Saving…" : isEdit ? "Save changes" : "Create quiz"}
+          </motion.button>
+          <motion.button type="button" onClick={copyQuestions}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition"
+            style={{ background: "rgba(245,200,66,0.1)", color: copied ? "#4caf50" : "#f5c842", border: "1px solid rgba(245,200,66,0.25)" }}
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied ? "Copied!" : "Copy"}
           </motion.button>
           <button type="button" onClick={() => navigate("/admin/quizzes")}
             className="text-sm transition" style={{ color: "rgba(255,255,255,0.4)" }}>
