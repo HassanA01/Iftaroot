@@ -166,11 +166,20 @@ function PodiumBlock({
   );
 }
 
+const PODIUM_MESSAGES = [
+  "\u0631\u064E\u0628\u0650\u0651 \u0632\u0650\u062F\u0652\u0646\u0650\u064A \u0639\u0650\u0644\u0652\u0645\u064B\u0627 \u2014 My Lord, increase me in knowledge",
+  "Knowledge shared is knowledge multiplied",
+  "Thanks for playing! Keep learning, keep growing",
+  "Every question answered is a step forward",
+  "Well played! May your curiosity never fade",
+];
+
 export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Dashboard", playerResults }: Props) {
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
   const myEntry = entries.find((e) => e.player_id === playerId);
   const firedRef = useRef(false);
+  const [podiumMessage] = useState(() => PODIUM_MESSAGES[Math.floor(Math.random() * PODIUM_MESSAGES.length)]);
 
   useEffect(() => {
     if (!firedRef.current) {
@@ -207,7 +216,7 @@ export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Das
           <h1 className="text-4xl font-black mb-2" style={{ color: "#f5c842", textShadow: "0 0 20px rgba(245,200,66,0.6)" }}>
             Game Over!
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.7)" }}>May your Iftaar be blessed ✨</p>
+          <p style={{ color: "rgba(255,255,255,0.7)" }}>{podiumMessage}</p>
         </motion.div>
 
         {/* Podium — order: 2nd, 1st, 3rd */}
