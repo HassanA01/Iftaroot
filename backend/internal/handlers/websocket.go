@@ -28,6 +28,7 @@ func newUpgrader(allowedOrigins []string) *websocket.Upgrader {
 					return true
 				}
 			}
+			slog.Warn("ws origin rejected", "origin", origin, "allowed", allowedOrigins)
 			return false
 		},
 	}
