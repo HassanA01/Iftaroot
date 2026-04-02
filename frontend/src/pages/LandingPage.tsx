@@ -140,10 +140,19 @@ export function LandingPage() {
 
   return (
     <div style={{ background: "#06091a", color: "#faf3e0", minHeight: "100vh", overflowX: "hidden" }}>
-      {/* Ambient layers */}
+      {/* Ambient layers — fixed, covers full page */}
       <AuroraBackground />
       <ParticleStarfield />
       <FloatingElements />
+
+      {/* 3D scene — covers full page, not just hero */}
+      {!isMobile && (
+        <Suspense fallback={null}>
+          <div style={{ position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none" }}>
+            <LandingHeroScene />
+          </div>
+        </Suspense>
+      )}
 
       {/* Grain overlay */}
       <canvas
@@ -232,15 +241,6 @@ export function LandingPage() {
           pointerEvents: "none",
         }} />
 
-        {/* 3D hero scene (desktop only) */}
-        {!isMobile && (
-          <Suspense fallback={null}>
-            <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
-              <LandingHeroScene />
-            </div>
-          </Suspense>
-        )}
-
         {/* 2D decorative elements (mobile only) */}
         {isMobile && (
           <>
@@ -318,9 +318,9 @@ export function LandingPage() {
         {/* Headline */}
         <div style={{ position: "relative", zIndex: 2, textAlign: "center", maxWidth: 780 }}>
           <motion.h1
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 40, scale: 0.9, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            transition={{ delay: 0.5, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             style={{
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 900,
@@ -329,23 +329,34 @@ export function LandingPage() {
               letterSpacing: "-0.02em",
               color: "#faf3e0",
               marginBottom: 0,
+              textShadow: "0 0 40px rgba(250,243,224,0.15), 0 4px 20px rgba(0,0,0,0.5), 0 8px 40px rgba(0,0,0,0.3)",
             }}
           >
-            GATHER.
-            <br />
-            <span style={{
-              WebkitTextStroke: "2px #f5c842",
-              color: "transparent",
-              display: "block",
-            }}>
+            <motion.span
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              style={{ display: "block" }}
+            >
+              GATHER.
+            </motion.span>
+            <motion.span
+              animate={{ y: [0, -3, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              style={{
+                WebkitTextStroke: "2px #f5c842",
+                color: "transparent",
+                display: "block",
+                filter: "drop-shadow(0 0 20px rgba(245,200,66,0.3))",
+              }}
+            >
               PLAY.
-            </span>
+            </motion.span>
           </motion.h1>
 
           <motion.h2
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 40, scale: 0.9, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            transition={{ delay: 0.65, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             style={{
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 900,
@@ -354,10 +365,17 @@ export function LandingPage() {
               letterSpacing: "-0.02em",
               color: "#f5c842",
               marginTop: 8,
+              textShadow: "0 0 60px rgba(245,200,66,0.3), 0 4px 20px rgba(0,0,0,0.5)",
             }}
           >
-            QUIZ YOUR
-            <br />WORLD.
+            <motion.span
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+              style={{ display: "block" }}
+            >
+              QUIZ YOUR
+              <br />WORLD.
+            </motion.span>
           </motion.h2>
 
           <motion.p
@@ -457,33 +475,40 @@ export function LandingPage() {
         <GeoDivider />
 
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 30, scale: 0.95, filter: "blur(6px)" }}
+          whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.7 }}
+          transition={{ duration: 0.8 }}
           style={{ textAlign: "center", margin: "52px 0 56px" }}
         >
-          <p style={{
-            fontSize: 11, letterSpacing: "0.3em", fontWeight: 600,
-            color: "#f5c842", textTransform: "uppercase",
-            fontFamily: "'Poppins', sans-serif", marginBottom: 16,
-          }}>
+          <motion.p
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            style={{
+              fontSize: 11, letterSpacing: "0.3em", fontWeight: 600,
+              color: "#f5c842", textTransform: "uppercase",
+              fontFamily: "'Poppins', sans-serif", marginBottom: 16,
+              textShadow: "0 0 20px rgba(245,200,66,0.4)",
+            }}
+          >
             Why Hilal
-          </p>
+          </motion.p>
           <h2 style={{
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 800, fontSize: "clamp(2rem, 5vw, 3.5rem)",
             color: "#faf3e0", letterSpacing: "-0.02em", lineHeight: 1.1,
+            textShadow: "0 0 30px rgba(250,243,224,0.1), 0 4px 15px rgba(0,0,0,0.4)",
           }}>
             Everything Kahoot charges for.<br />
-            <span style={{ color: "#f5c842" }}>Free. Forever.</span>
+            <span style={{ color: "#f5c842", textShadow: "0 0 40px rgba(245,200,66,0.3)" }}>Free. Forever.</span>
           </h2>
         </motion.div>
 
         {/* Kahoot comparison hero card */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 24, scale: 0.96, filter: "blur(4px)" }}
+          whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+          whileHover={{ scale: 1.01, boxShadow: "0 20px 60px rgba(245,200,66,0.08)" }}
           viewport={{ once: true, margin: "-60px" }}
           transition={{ duration: 0.7 }}
           style={{
@@ -493,6 +518,8 @@ export function LandingPage() {
             border: "1px solid rgba(245,200,66,0.15)",
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
           }}
         >
           {/* Kahoot column */}
@@ -648,23 +675,29 @@ export function LandingPage() {
           <GeoDivider />
 
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 30, scale: 0.95, filter: "blur(6px)" }}
+            whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
             viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.7 }}
+            transition={{ duration: 0.8 }}
             style={{ textAlign: "center", margin: "52px 0 64px" }}
           >
-            <p style={{
-              fontSize: 11, letterSpacing: "0.3em", fontWeight: 600,
-              color: "#f5c842", textTransform: "uppercase",
-              fontFamily: "'Poppins', sans-serif", marginBottom: 16,
-            }}>
+            <motion.p
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                fontSize: 11, letterSpacing: "0.3em", fontWeight: 600,
+                color: "#f5c842", textTransform: "uppercase",
+                fontFamily: "'Poppins', sans-serif", marginBottom: 16,
+                textShadow: "0 0 20px rgba(245,200,66,0.4)",
+              }}
+            >
               How it works
-            </p>
+            </motion.p>
             <h2 style={{
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 800, fontSize: "clamp(2rem, 5vw, 3.5rem)",
               color: "#faf3e0", letterSpacing: "-0.02em", lineHeight: 1.1,
+              textShadow: "0 0 30px rgba(250,243,224,0.1), 0 4px 15px rgba(0,0,0,0.4)",
             }}>
               Three steps to quiz night.
             </h2>
@@ -754,14 +787,20 @@ export function LandingPage() {
         }} />
 
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 40, scale: 0.9, filter: "blur(8px)" }}
+          whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
-            <CrescentMoon className="w-20 h-20" />
-          </div>
+          <motion.div
+            animate={{ y: [0, -8, 0], rotate: [0, 3, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}
+          >
+            <div style={{ filter: "drop-shadow(0 0 20px rgba(245,200,66,0.5))" }}>
+              <CrescentMoon className="w-20 h-20" />
+            </div>
+          </motion.div>
 
           <h2 style={{
             fontFamily: "'Poppins', sans-serif",
@@ -771,6 +810,7 @@ export function LandingPage() {
             letterSpacing: "-0.03em",
             lineHeight: 1.05,
             marginBottom: 20,
+            textShadow: "0 0 40px rgba(250,243,224,0.15), 0 4px 20px rgba(0,0,0,0.5)",
           }}>
             Ready to play?
           </h2>

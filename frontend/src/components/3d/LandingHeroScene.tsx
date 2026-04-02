@@ -9,7 +9,7 @@ export function LandingHeroScene() {
     <Canvas
       camera={{ position: [0, 0, 5], fov: 50 }}
       style={{
-        position: "absolute",
+        position: "fixed",
         inset: 0,
         zIndex: 0,
       }}
