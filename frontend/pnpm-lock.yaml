@@ -44,6 +44,9 @@ importers:
       motion:
         specifier: ^12.34.3
         version: 12.34.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      postprocessing:
+        specifier: ^6.39.0
+        version: 6.39.0(three@0.183.2)
       qrcode.react:
         specifier: ^4.2.0
         version: 4.2.0(react@19.2.4)

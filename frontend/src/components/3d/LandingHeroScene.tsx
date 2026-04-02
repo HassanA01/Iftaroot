@@ -1,0 +1,52 @@
+import * as THREE from "three";
+import { Canvas } from "@react-three/fiber";
+import {
+  EffectComposer,
+  Bloom,
+  Vignette,
+  ChromaticAberration,
+} from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
+import { GradientMesh } from "./GradientMesh";
+import { IslamicLattice } from "./IslamicLattice";
+import { CrescentMoon3D } from "./CrescentMoon3D";
+
+export function LandingHeroScene() {
+  return (
+    <Canvas
+      camera={{ position: [0, 0, 5], fov: 50 }}
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 0,
+      }}
+      gl={{ antialias: true, alpha: false }}
+      dpr={[1, 1.5]}
+    >
+      <ambientLight intensity={0.3} />
+      <directionalLight position={[5, 5, 5]} intensity={0.5} color="#f5c842" />
+
+      <GradientMesh />
+      <IslamicLattice />
+      <CrescentMoon3D />
+
+      <EffectComposer>
+        <Bloom
+          intensity={0.4}
+          luminanceThreshold={0.6}
+          luminanceSmoothing={0.9}
+          mipmapBlur
+        />
+        <Vignette
+          offset={0.3}
+          darkness={0.6}
+          blendFunction={BlendFunction.NORMAL}
+        />
+        <ChromaticAberration
+          offset={new THREE.Vector2(0.001, 0.001)}
+          blendFunction={BlendFunction.NORMAL}
+        />
+      </EffectComposer>
+    </Canvas>
+  );
+}
