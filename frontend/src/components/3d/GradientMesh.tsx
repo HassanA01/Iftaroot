@@ -84,7 +84,7 @@ export function GradientMesh() {
   });
 
   return (
-    <mesh ref={meshRef} position={[0, 0, -3]} scale={[12, 8, 1]}>
+    <mesh ref={meshRef} position={[0, 0, -3]} scale={[20, 14, 1]}>
       <planeGeometry args={[1, 1, 32, 32]} />
       <shaderMaterial
         ref={materialRef}

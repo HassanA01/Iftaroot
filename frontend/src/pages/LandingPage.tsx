@@ -181,8 +181,11 @@ export function LandingPage() {
           </span>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
-          <button
+          <motion.button
             onClick={() => navigate("/join")}
+            whileHover={{ scale: 1.08, boxShadow: "0 0 20px rgba(245,200,66,0.3)" }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
             style={{
               padding: "8px 20px", borderRadius: 8,
               border: "1px solid rgba(245,200,66,0.4)",
@@ -190,28 +193,26 @@ export function LandingPage() {
               color: "#f5c842", fontWeight: 600, fontSize: 13,
               letterSpacing: "0.05em", cursor: "pointer",
               fontFamily: "'Poppins', sans-serif",
-              transition: "all 0.2s",
             }}
-            onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = "rgba(245,200,66,0.18)"; }}
-            onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = "rgba(245,200,66,0.08)"; }}
           >
             Join Game
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             onClick={() => navigate("/login")}
+            whileHover={{ scale: 1.08, boxShadow: "0 0 25px rgba(245,200,66,0.4)" }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
             style={{
               padding: "8px 20px", borderRadius: 8,
               background: "#f5c842",
               color: "#06091a", fontWeight: 700, fontSize: 13,
               letterSpacing: "0.05em", cursor: "pointer",
               fontFamily: "'Poppins', sans-serif",
-              border: "none", transition: "all 0.2s",
+              border: "none",
             }}
-            onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = "#ffd700"; }}
-            onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = "#f5c842"; }}
           >
             Host a Quiz
-          </button>
+          </motion.button>
         </div>
       </motion.nav>
 
@@ -385,8 +386,11 @@ export function LandingPage() {
             transition={{ delay: 1.2, duration: 0.7 }}
             style={{ marginTop: 44, display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}
           >
-            <button
+            <motion.button
               onClick={() => navigate("/join")}
+              whileHover={{ scale: 1.05, y: -3, boxShadow: "0 0 60px rgba(245,200,66,0.6), 0 14px 40px rgba(0,0,0,0.5)" }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
               style={{
                 padding: "16px 36px", borderRadius: 12,
                 background: "#f5c842",
@@ -394,24 +398,16 @@ export function LandingPage() {
                 letterSpacing: "0.06em", cursor: "pointer",
                 fontFamily: "'Poppins', sans-serif", border: "none",
                 boxShadow: "0 0 40px rgba(245,200,66,0.35), 0 8px 24px rgba(0,0,0,0.4)",
-                transition: "all 0.2s",
                 textTransform: "uppercase",
-              }}
-              onMouseEnter={e => {
-                const b = e.currentTarget;
-                b.style.transform = "translateY(-2px)";
-                b.style.boxShadow = "0 0 60px rgba(245,200,66,0.5), 0 12px 32px rgba(0,0,0,0.5)";
-              }}
-              onMouseLeave={e => {
-                const b = e.currentTarget;
-                b.style.transform = "translateY(0)";
-                b.style.boxShadow = "0 0 40px rgba(245,200,66,0.35), 0 8px 24px rgba(0,0,0,0.4)";
               }}
             >
               Join a Game
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={() => navigate("/login")}
+              whileHover={{ scale: 1.05, y: -3, borderColor: "rgba(245,200,66,0.6)", color: "#f5c842", boxShadow: "0 0 30px rgba(245,200,66,0.15)" }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
               style={{
                 padding: "16px 36px", borderRadius: 12,
                 background: "transparent",
@@ -419,8 +415,8 @@ export function LandingPage() {
                 letterSpacing: "0.06em", cursor: "pointer",
                 fontFamily: "'Poppins', sans-serif",
                 border: "1.5px solid rgba(250,243,224,0.25)",
-                transition: "all 0.2s",
                 textTransform: "uppercase",
+                boxShadow: "none",
               }}
               onMouseEnter={e => {
                 const b = e.currentTarget;
@@ -434,7 +430,7 @@ export function LandingPage() {
               }}
             >
               Host a Quiz
-            </button>
+            </motion.button>
           </motion.div>
         </div>
 
@@ -603,11 +599,13 @@ export function LandingPage() {
               key={f.label}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.03, y: -4, boxShadow: "0 8px 30px rgba(245,200,66,0.1)" }}
               viewport={{ once: true, margin: "-40px" }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
               style={{
                 padding: "32px 28px",
                 background: "rgba(6,9,26,0.95)",
+                cursor: "default",
               }}
             >
               <span style={{
@@ -697,6 +695,7 @@ export function LandingPage() {
                 key={step.n}
                 initial={{ opacity: 0, x: step.side === "left" ? -30 : 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
+                whileHover={{ scale: 1.02, x: step.side === "left" ? 8 : -8 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.7, delay: 0.1 }}
                 style={{
@@ -784,8 +783,11 @@ export function LandingPage() {
             Assalamu Alaikum. Enter a game code to join your host's session.
           </p>
 
-          <button
+          <motion.button
             onClick={() => navigate("/join")}
+            whileHover={{ scale: 1.06, y: -4, boxShadow: "0 0 80px rgba(245,200,66,0.6), 0 16px 48px rgba(0,0,0,0.6)" }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
             style={{
               padding: "18px 52px", borderRadius: 14,
               background: "#f5c842",
@@ -794,21 +796,10 @@ export function LandingPage() {
               fontFamily: "'Poppins', sans-serif", border: "none",
               boxShadow: "0 0 60px rgba(245,200,66,0.4), 0 12px 40px rgba(0,0,0,0.5)",
               textTransform: "uppercase",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={e => {
-              const b = e.currentTarget;
-              b.style.transform = "translateY(-3px) scale(1.02)";
-              b.style.boxShadow = "0 0 80px rgba(245,200,66,0.6), 0 16px 48px rgba(0,0,0,0.6)";
-            }}
-            onMouseLeave={e => {
-              const b = e.currentTarget;
-              b.style.transform = "translateY(0) scale(1)";
-              b.style.boxShadow = "0 0 60px rgba(245,200,66,0.4), 0 12px 40px rgba(0,0,0,0.5)";
             }}
           >
             Join a Game
-          </button>
+          </motion.button>
         </motion.div>
 
         {/* Footer line */}
