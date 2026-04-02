@@ -58,7 +58,9 @@ function OrbitingStar({
       <meshStandardMaterial
         color="#f5c842"
         emissive="#f5c842"
-        emissiveIntensity={0.8}
+        emissiveIntensity={0.5}
+        transparent
+        opacity={0.7}
       />
     </mesh>
   );
@@ -105,7 +107,7 @@ export function CrescentMoon3D() {
             metalness={0.7}
             roughness={0.2}
             transparent
-            opacity={0.7}
+            opacity={0.55}
           />
         </mesh>
 

@@ -309,7 +309,7 @@ export function LandingPage() {
             color: "#f5c842", textTransform: "uppercase",
             fontFamily: "'Poppins', sans-serif",
           }}>
-            Live Islamic Quiz
+            Live Quiz Platform
           </span>
           <StarOrnament size={16} opacity={0.7} />
         </motion.div>

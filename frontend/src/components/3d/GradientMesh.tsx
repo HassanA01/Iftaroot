@@ -46,17 +46,21 @@ const fragmentShader = `
   }
 
   void main() {
-    float n = snoise(vUv * 3.0 + uTime * 0.08);
-    float n2 = snoise(vUv * 2.0 - uTime * 0.05);
+    float n = snoise(vUv * 3.0 + uTime * 0.15);
+    float n2 = snoise(vUv * 2.0 - uTime * 0.1);
+    float n3 = snoise(vUv * 4.0 + uTime * 0.12);
 
-    vec3 deepPurple = vec3(0.102, 0.039, 0.180);
-    vec3 midPurple  = vec3(0.165, 0.078, 0.259);
-    vec3 darkNavy   = vec3(0.039, 0.020, 0.118);
-    vec3 gold       = vec3(0.961, 0.784, 0.259);
+    vec3 deepNavy   = vec3(0.024, 0.035, 0.102);  // #06091a
+    vec3 richPurple = vec3(0.10, 0.04, 0.18);     // visible purple
+    vec3 midPurple  = vec3(0.07, 0.02, 0.14);     // mid tone
+    vec3 gold       = vec3(0.961, 0.784, 0.259);  // #f5c842
 
-    vec3 color = mix(deepPurple, midPurple, smoothstep(-0.5, 0.5, n));
-    color = mix(color, darkNavy, smoothstep(-0.3, 0.7, n2));
-    color += gold * smoothstep(0.5, 0.8, n * n2) * 0.08;
+    vec3 color = mix(deepNavy, richPurple, smoothstep(-0.3, 0.5, n));
+    color = mix(color, midPurple, smoothstep(-0.2, 0.6, n2));
+    // Subtle gold shimmer that moves
+    color += gold * smoothstep(0.4, 0.8, n * n2) * 0.05;
+    // Add extra purple brightness in patches for visible movement
+    color += richPurple * smoothstep(0.2, 0.7, n3) * 0.3;
 
     gl_FragColor = vec4(color, 1.0);
   }

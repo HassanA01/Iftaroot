@@ -55,16 +55,16 @@ export function IslamicLattice() {
             <meshStandardMaterial
               color="#f5c842"
               emissive="#f5c842"
-              emissiveIntensity={0.1}
+              emissiveIntensity={0.08}
               transparent
-              opacity={0.12}
+              opacity={0.1}
               metalness={0.6}
               roughness={0.3}
               side={THREE.DoubleSide}
             />
           </mesh>
         ))}
-        <pointLight color="#f5c842" intensity={2} position={[0, 0, -1]} distance={8} />
+        <pointLight color="#f5c842" intensity={1} position={[0, 0, -1]} distance={8} />
       </group>
     </Float>
   );

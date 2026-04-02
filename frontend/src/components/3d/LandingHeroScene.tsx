@@ -23,8 +23,8 @@ export function LandingHeroScene() {
       gl={{ antialias: true, alpha: false }}
       dpr={[1, 1.5]}
     >
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[5, 5, 5]} intensity={0.5} color="#f5c842" />
+      <ambientLight intensity={0.2} />
+      <directionalLight position={[5, 5, 5]} intensity={0.35} color="#f5c842" />
 
       <GradientMesh />
       <IslamicLattice />
