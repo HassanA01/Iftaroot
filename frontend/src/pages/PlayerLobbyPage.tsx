@@ -102,7 +102,7 @@ export function PlayerLobbyPage() {
   if (sessionLoading) {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center">
             <motion.div
@@ -122,7 +122,7 @@ export function PlayerLobbyPage() {
   if (sessionError || !session) {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex items-center justify-center px-6">
           <motion.div
             className="text-center w-full max-w-sm p-8 rounded-3xl"
@@ -157,7 +157,7 @@ export function PlayerLobbyPage() {
   if (!playerId || !playerName) {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex items-center justify-center px-6">
           <motion.div
             className="text-center w-full max-w-sm p-8 rounded-3xl"
@@ -188,7 +188,7 @@ export function PlayerLobbyPage() {
   // ── Lobby ──
   return (
     <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <div className="hilal-pattern" />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-8 max-w-md mx-auto">
         {/* Animated lantern */}

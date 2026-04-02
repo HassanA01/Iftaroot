@@ -104,7 +104,7 @@ export function HostLobbyPage() {
   if (isError) {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <p style={{ color: "#f44336" }}>Session not found.</p>
         </div>
@@ -114,7 +114,7 @@ export function HostLobbyPage() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <div className="hilal-pattern" />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center px-4 sm:px-6 py-8 sm:py-12 max-w-2xl mx-auto">
         {/* Mute toggle */}

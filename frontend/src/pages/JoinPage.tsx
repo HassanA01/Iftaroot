@@ -49,7 +49,7 @@ export function JoinPage() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <div className="hilal-pattern" />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-12">
         {/* Floating lanterns */}

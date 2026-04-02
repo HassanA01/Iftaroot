@@ -227,7 +227,7 @@ export function HostGamePage() {
   if (phase === "waiting") {
     return (
       <div className="min-h-screen w-full relative overflow-hidden flex items-center justify-center" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 text-center space-y-4">
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: "linear" }}>
             <CrescentIcon className="w-12 h-12 mx-auto" style={{ color: "#f5c842" }} />
@@ -260,7 +260,7 @@ export function HostGamePage() {
     const isLastQuestion = !currentQuestion || currentQuestion.question_index + 1 >= currentQuestion.total_questions;
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-8">
           <div className="w-full max-w-lg space-y-6">
             <motion.h2 className="text-2xl font-black text-center" style={{ color: "#f5c842" }}
@@ -291,7 +291,7 @@ export function HostGamePage() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden flex flex-col" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <div className="hilal-pattern" />
 
       {showEndConfirm && (
         <ConfirmModal

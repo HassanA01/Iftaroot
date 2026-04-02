@@ -38,7 +38,7 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden flex items-center justify-center px-4" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <div className="hilal-pattern" />
 
       {/* Floating lanterns */}
       <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-24 pointer-events-none">

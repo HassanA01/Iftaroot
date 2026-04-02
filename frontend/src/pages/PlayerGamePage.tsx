@@ -178,7 +178,7 @@ export function PlayerGamePage() {
   if (phase === "ended") {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex items-center justify-center px-6">
           <motion.div className="text-center w-full max-w-sm p-8 rounded-3xl"
             style={{ background: "linear-gradient(135deg, rgba(42,20,66,0.9) 0%, rgba(30,15,50,0.95) 100%)", boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,200,66,0.2)" }}
@@ -201,7 +201,7 @@ export function PlayerGamePage() {
   if (phase === "waiting") {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center">
             <motion.div animate={{ y: [0, -15, 0], rotate: [-3, 3, -3] }}
@@ -231,7 +231,7 @@ export function PlayerGamePage() {
   if (phase === "leaderboard") {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
           <motion.div className="text-center mb-8" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex items-center justify-center gap-3 mb-2">
@@ -265,7 +265,7 @@ export function PlayerGamePage() {
 
       return (
         <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-          <div className="ramadan-pattern" />
+          <div className="hilal-pattern" />
           <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
             <motion.h3 className="text-lg font-bold text-white mb-4 text-center"
               initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
@@ -329,7 +329,7 @@ export function PlayerGamePage() {
     const correctIds = revealPayload.correct_option_ids ?? (revealPayload.correct_option_id ? [revealPayload.correct_option_id] : []);
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
           {/* Answer tiles */}
           <div className="grid grid-cols-1 gap-4 mb-6">
@@ -413,7 +413,7 @@ export function PlayerGamePage() {
 
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
 
         <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
           {/* Timer */}

@@ -54,7 +54,7 @@ export function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <div className="hilal-pattern" />
 
       {/* Header */}
       <header

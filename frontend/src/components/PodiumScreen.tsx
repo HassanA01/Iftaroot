@@ -192,7 +192,7 @@ export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Das
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <div className="hilal-pattern" />
 
       <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
         {/* Floating lanterns */}
