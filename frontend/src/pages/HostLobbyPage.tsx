@@ -10,6 +10,9 @@ import { useWebSocket } from "../hooks/useWebSocket";
 import { useLobbyAudio } from "../hooks/useLobbyAudio";
 import { useGameStore } from "../stores/gameStore";
 import type { WsMessage, GamePlayer } from "../types";
+import { AuroraBackground } from "../components/AuroraBackground";
+import { ParticleStarfield } from "../components/ParticleStarfield";
+import { FloatingElements } from "../components/FloatingElements";
 
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:8081";
 
@@ -114,6 +117,9 @@ export function HostLobbyPage() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
+      <AuroraBackground />
+      <ParticleStarfield />
+      <FloatingElements density="normal" />
       <div className="hilal-pattern" />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center px-4 sm:px-6 py-8 sm:py-12 max-w-2xl mx-auto">

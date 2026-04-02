@@ -1,6 +1,14 @@
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "../hooks/useMobileDetect";
+import { AuroraBackground } from "../components/AuroraBackground";
+import { ParticleStarfield } from "../components/ParticleStarfield";
+import { FloatingElements } from "../components/FloatingElements";
+
+const LandingHeroScene = lazy(() =>
+  import("../components/3d/LandingHeroScene").then((m) => ({ default: m.LandingHeroScene }))
+);
 
 /* ─── Star field ─────────────────────────────────────────────────────────── */
 const STARS = Array.from({ length: 120 }, (_, i) => ({
@@ -105,6 +113,7 @@ function GeoDivider() {
 /* ─── Main component ─────────────────────────────────────────────────────── */
 export function LandingPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const moonY = useTransform(scrollYProgress, [0, 1], [0, -80]);
@@ -131,6 +140,11 @@ export function LandingPage() {
 
   return (
     <div style={{ background: "#06091a", color: "#faf3e0", minHeight: "100vh", overflowX: "hidden" }}>
+      {/* Ambient layers */}
+      <AuroraBackground />
+      <ParticleStarfield />
+      <FloatingElements />
+
       {/* Grain overlay */}
       <canvas
         ref={canvasRef}
@@ -217,57 +231,71 @@ export function LandingPage() {
           pointerEvents: "none",
         }} />
 
-        {/* Stars */}
-        {STARS.map(s => (
-          <motion.div
-            key={s.id}
-            style={{
-              position: "absolute",
-              left: `${s.x}%`,
-              top: `${s.y}%`,
-              width: s.size,
-              height: s.size,
-              borderRadius: "50%",
-              background: s.id % 11 === 0 ? "#f5c842" : "white",
-              pointerEvents: "none",
-            }}
-            animate={{ opacity: [0.2, 1, 0.2] }}
-            transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, ease: "easeInOut" }}
-          />
-        ))}
+        {/* 3D hero scene (desktop only) */}
+        {!isMobile && (
+          <Suspense fallback={null}>
+            <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+              <LandingHeroScene />
+            </div>
+          </Suspense>
+        )}
 
-        {/* Moon */}
-        <motion.div
-          style={{ position: "absolute", top: "8%", right: "12%", y: moonY, opacity: moonOpacity }}
-        >
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
-          >
-            <CrescentMoon className="w-36 h-36 sm:w-48 sm:h-48" />
-          </motion.div>
-        </motion.div>
+        {/* 2D decorative elements (mobile only) */}
+        {isMobile && (
+          <>
+            {/* Stars */}
+            {STARS.map(s => (
+              <motion.div
+                key={s.id}
+                style={{
+                  position: "absolute",
+                  left: `${s.x}%`,
+                  top: `${s.y}%`,
+                  width: s.size,
+                  height: s.size,
+                  borderRadius: "50%",
+                  background: s.id % 11 === 0 ? "#f5c842" : "white",
+                  pointerEvents: "none",
+                }}
+                animate={{ opacity: [0.2, 1, 0.2] }}
+                transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, ease: "easeInOut" }}
+              />
+            ))}
 
-        {/* Lanterns */}
-        <motion.div style={{ position: "absolute", top: "15%", left: "6%", opacity: 0.7 }}
-          initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.7 }} transition={{ delay: 0.8, duration: 1 }}>
-          <motion.div animate={{ rotate: [-3, 3, -3] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
-            <Lantern className="w-10 h-16" />
-          </motion.div>
-        </motion.div>
-        <motion.div style={{ position: "absolute", top: "10%", left: "16%", opacity: 0.5 }}
-          initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.5 }} transition={{ delay: 1, duration: 1 }}>
-          <motion.div animate={{ rotate: [3, -3, 3] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
-            <Lantern className="w-7 h-12" glowColor="#ff6b35" />
-          </motion.div>
-        </motion.div>
-        <motion.div style={{ position: "absolute", top: "20%", right: "6%", opacity: 0.5 }}
-          initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.5 }} transition={{ delay: 1.2, duration: 1 }}>
-          <motion.div animate={{ rotate: [2, -4, 2] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}>
-            <Lantern className="w-8 h-14" glowColor="#ff6b35" />
-          </motion.div>
-        </motion.div>
+            {/* Moon */}
+            <motion.div
+              style={{ position: "absolute", top: "8%", right: "12%", y: moonY, opacity: moonOpacity }}
+            >
+              <motion.div
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
+              >
+                <CrescentMoon className="w-36 h-36 sm:w-48 sm:h-48" />
+              </motion.div>
+            </motion.div>
+
+            {/* Lanterns */}
+            <motion.div style={{ position: "absolute", top: "15%", left: "6%", opacity: 0.7 }}
+              initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.7 }} transition={{ delay: 0.8, duration: 1 }}>
+              <motion.div animate={{ rotate: [-3, 3, -3] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+                <Lantern className="w-10 h-16" />
+              </motion.div>
+            </motion.div>
+            <motion.div style={{ position: "absolute", top: "10%", left: "16%", opacity: 0.5 }}
+              initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.5 }} transition={{ delay: 1, duration: 1 }}>
+              <motion.div animate={{ rotate: [3, -3, 3] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
+                <Lantern className="w-7 h-12" glowColor="#ff6b35" />
+              </motion.div>
+            </motion.div>
+            <motion.div style={{ position: "absolute", top: "20%", right: "6%", opacity: 0.5 }}
+              initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.5 }} transition={{ delay: 1.2, duration: 1 }}>
+              <motion.div animate={{ rotate: [2, -4, 2] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}>
+                <Lantern className="w-8 h-14" glowColor="#ff6b35" />
+              </motion.div>
+            </motion.div>
+          </>
+        )}
 
         {/* Ornament row above headline */}
         <motion.div
@@ -281,7 +309,7 @@ export function LandingPage() {
             color: "#f5c842", textTransform: "uppercase",
             fontFamily: "'Poppins', sans-serif",
           }}>
-            Ramadan 2026
+            Live Islamic Quiz
           </span>
           <StarOrnament size={16} opacity={0.7} />
         </motion.div>
@@ -302,14 +330,14 @@ export function LandingPage() {
               marginBottom: 0,
             }}
           >
-            CELEBRATE
+            GATHER.
             <br />
             <span style={{
               WebkitTextStroke: "2px #f5c842",
               color: "transparent",
               display: "block",
             }}>
-              RAMADAN.
+              PLAY.
             </span>
           </motion.h1>
 
@@ -346,7 +374,7 @@ export function LandingPage() {
               margin: "28px auto 0",
             }}
           >
-            A live multiplayer quiz game built for Ramadan nights.
+            A live multiplayer quiz game for your community.
             Challenge friends, test your knowledge, and compete in real time.
           </motion.p>
 
@@ -487,7 +515,7 @@ export function LandingPage() {
             {[
               "Up to 10 players free",
               "Paid plan for more players",
-              "No Ramadan theme",
+              "No Islamic design",
               "Generic quiz experience",
               "AI quiz generation — paid only",
             ].map((item) => (
@@ -527,7 +555,7 @@ export function LandingPage() {
             {[
               "Unlimited players, always free",
               "No account needed to play",
-              "Built for Ramadan",
+              "Built for the Ummah",
               "Real-time, speed-scored competition",
               "AI-powered quiz generation — free",
             ].map((item) => (
@@ -556,9 +584,9 @@ export function LandingPage() {
               body: "WebSocket-powered. Every answer, score update, and reveal happens instantly across all connected players.",
             },
             {
-              label: "Ramadan-Themed",
-              title: "Designed for the occasion",
-              body: "Prayer arc transitions, crescent moon motifs, and golden design tokens — built with intention, not as an afterthought.",
+              label: "Islamic Design",
+              title: "Designed with intention",
+              body: "Prayer arc transitions, crescent moon motifs, and golden design tokens — crafted for the community, not as an afterthought.",
             },
             {
               label: "Speed Scoring",
@@ -661,7 +689,7 @@ export function LandingPage() {
               {
                 n: "03",
                 title: "Play, compete, celebrate",
-                body: "Questions appear in real time. The prayer arc counts you in. Scores update live. Crown your Ramadan champion.",
+                body: "Questions appear in real time. The prayer arc counts you in. Scores update live. Crown your champion.",
                 side: "left",
               },
             ].map((step, i) => (
@@ -753,7 +781,7 @@ export function LandingPage() {
             fontSize: 16, color: "rgba(250,243,224,0.5)",
             lineHeight: 1.7, maxWidth: 440, margin: "0 auto 44px",
           }}>
-            Ramadan Mubarak. Enter a game code to join your host's session.
+            Assalamu Alaikum. Enter a game code to join your host's session.
           </p>
 
           <button
