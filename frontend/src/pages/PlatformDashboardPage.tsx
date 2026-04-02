@@ -286,7 +286,7 @@ function GrowthTooltip({
 const OVERVIEW_CARDS: {
   key: string;
   label: string;
-  icon: React.ElementType;
+  icon: typeof Shield;
   decimal?: number;
   wow?: string;
   format?: "duration" | "percent";

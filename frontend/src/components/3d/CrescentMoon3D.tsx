@@ -76,14 +76,20 @@ export function CrescentMoon3D() {
     groupRef.current.rotation.x += (targetRotX - groupRef.current.rotation.x) * 0.05;
   });
 
+  // Deterministic pseudo-random based on index to satisfy React hooks purity
   const stars = useMemo(
     () =>
-      Array.from({ length: 24 }, (_, i) => ({
-        radius: 1.5 + Math.random() * 1.2,
-        speed: 0.2 + Math.random() * 0.4,
-        offset: (i / 24) * Math.PI * 2,
-        size: 0.02 + Math.random() * 0.03,
-      })),
+      Array.from({ length: 24 }, (_, i) => {
+        const seed = (i * 7919 + 104729) % 1000 / 1000; // deterministic hash
+        const seed2 = (i * 6271 + 87631) % 1000 / 1000;
+        const seed3 = (i * 3571 + 52147) % 1000 / 1000;
+        return {
+          radius: 1.5 + seed * 1.2,
+          speed: 0.2 + seed2 * 0.4,
+          offset: (i / 24) * Math.PI * 2,
+          size: 0.02 + seed3 * 0.03,
+        };
+      }),
     [],
   );
 

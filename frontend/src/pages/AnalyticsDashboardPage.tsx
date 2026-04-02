@@ -162,7 +162,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 const OVERVIEW_CARDS: {
   key: keyof OverviewStats;
   label: string;
-  icon: React.ElementType;
+  icon: typeof BookOpen;
   decimal?: number;
 }[] = [
   { key: "total_quizzes", label: "Total Quizzes", icon: BookOpen },
