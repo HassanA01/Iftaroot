@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { CrescentIcon, LanternIcon } from "../components/icons";
 import { WhatsNewModal } from "../components/WhatsNewModal";
 import { useAuthStore } from "../stores/authStore";
+import { AuroraBackground } from "../components/AuroraBackground";
+import { ParticleStarfield } from "../components/ParticleStarfield";
 
 function NavItem({
   to,
@@ -54,7 +56,9 @@ export function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <AuroraBackground />
+      <ParticleStarfield />
+      <div className="hilal-pattern" />
 
       {/* Header */}
       <header
@@ -179,7 +183,7 @@ export function AdminDashboardPage() {
         </AnimatePresence>
       </header>
 
-      <main className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <main className="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         <Outlet />
       </main>
 

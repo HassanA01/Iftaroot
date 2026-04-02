@@ -4,6 +4,10 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import { LanternIcon, CrescentIcon } from "../components/icons";
 import { joinSession } from "../api/sessions";
+import { AuroraBackground } from "../components/AuroraBackground";
+import { ParticleStarfield } from "../components/ParticleStarfield";
+import { FloatingElements } from "../components/FloatingElements";
+import { TiltCard } from "../components/TiltCard";
 
 export function JoinPage() {
   const navigate = useNavigate();
@@ -49,7 +53,10 @@ export function JoinPage() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <AuroraBackground />
+      <ParticleStarfield />
+      <FloatingElements density="sparse" />
+      <div className="hilal-pattern" />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-12">
         {/* Floating lanterns */}
@@ -75,15 +82,12 @@ export function JoinPage() {
         )}
 
         {/* Card */}
-        <motion.div
+        <TiltCard
           className="w-full max-w-sm rounded-3xl p-8"
           style={{
             background: "linear-gradient(135deg, rgba(42,20,66,0.9) 0%, rgba(30,15,50,0.95) 100%)",
             boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,200,66,0.2)",
-          }}
-          initial={{ opacity: 0, scale: 0.92, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.4 }}>
+          }}>
 
           {/* Header */}
           <div className="text-center mb-8">
@@ -156,7 +160,7 @@ export function JoinPage() {
               {loading ? "Joining…" : "Join Game"}
             </motion.button>
           </form>
-        </motion.div>
+        </TiltCard>
       </div>
     </div>
   );

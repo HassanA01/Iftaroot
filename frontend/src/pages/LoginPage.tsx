@@ -4,6 +4,10 @@ import { motion } from "motion/react";
 import { CrescentIcon, LanternIcon } from "../components/icons";
 import { login } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
+import { AuroraBackground } from "../components/AuroraBackground";
+import { ParticleStarfield } from "../components/ParticleStarfield";
+import { FloatingElements } from "../components/FloatingElements";
+import { TiltCard } from "../components/TiltCard";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -38,7 +42,10 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden flex items-center justify-center px-4" style={{ background: "#1a0a2e" }}>
-      <div className="ramadan-pattern" />
+      <AuroraBackground />
+      <ParticleStarfield />
+      <FloatingElements density="sparse" />
+      <div className="hilal-pattern" />
 
       {/* Floating lanterns */}
       <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-24 pointer-events-none">
@@ -66,14 +73,13 @@ export function LoginPage() {
         </motion.div>
 
         {/* Card */}
-        <motion.div
+        <TiltCard
           className="rounded-2xl p-8 space-y-5"
           style={{
             background: "linear-gradient(135deg, rgba(42,20,66,0.9) 0%, rgba(30,15,50,0.95) 100%)",
             border: "1px solid rgba(245,200,66,0.2)",
             boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
-          }}
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          }}>
 
           {error && (
             <motion.div
@@ -147,7 +153,7 @@ export function LoginPage() {
               Register
             </Link>
           </p>
-        </motion.div>
+        </TiltCard>
       </div>
     </div>
   );

@@ -30,14 +30,14 @@ body {
 }
 
 /* ─── Reusable background: dark-purple + arabesque pattern ─────────────── */
-.bg-ramadan {
+.bg-hilal {
   background-color: #1a0a2e;
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30 30 0zm0 10L10 30l20 20 20-20-20-20z' fill='%23f5c842' fill-rule='evenodd'/%3E%3C/svg%3E");
   background-size: 60px 60px;
 }
 
 /* Full-viewport diamond lattice overlay — fixed so it never affects layout or scroll */
-.ramadan-pattern {
+.hilal-pattern {
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -45,4 +45,23 @@ body {
   opacity: 0.05;
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30 30 0zm0 10L10 30l20 20 20-20-20-20z' fill='%23f5c842' fill-rule='evenodd'/%3E%3C/svg%3E");
   background-size: 60px 60px;
+}
+
+/* ─── Aurora gradient animation ──────────────────────────────────────────── */
+@keyframes aurora-drift-1 {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  33% { transform: translate(5%, -3%) scale(1.05); }
+  66% { transform: translate(-3%, 5%) scale(0.95); }
+}
+
+@keyframes aurora-drift-2 {
+  0%, 100% { transform: translate(0%, 0%) scale(1.05); }
+  33% { transform: translate(-4%, 4%) scale(1); }
+  66% { transform: translate(6%, -2%) scale(1.1); }
+}
+
+@keyframes aurora-drift-3 {
+  0%, 100% { transform: translate(0%, 0%) scale(0.95); }
+  33% { transform: translate(3%, 6%) scale(1.05); }
+  66% { transform: translate(-5%, -4%) scale(1); }
 }

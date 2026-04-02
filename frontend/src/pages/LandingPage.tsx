@@ -1,6 +1,14 @@
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "../hooks/useMobileDetect";
+import { AuroraBackground } from "../components/AuroraBackground";
+import { ParticleStarfield } from "../components/ParticleStarfield";
+import { FloatingElements } from "../components/FloatingElements";
+
+const LandingHeroScene = lazy(() =>
+  import("../components/3d/LandingHeroScene").then((m) => ({ default: m.LandingHeroScene }))
+);
 
 /* ─── Star field ─────────────────────────────────────────────────────────── */
 const STARS = Array.from({ length: 120 }, (_, i) => ({
@@ -105,6 +113,7 @@ function GeoDivider() {
 /* ─── Main component ─────────────────────────────────────────────────────── */
 export function LandingPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const moonY = useTransform(scrollYProgress, [0, 1], [0, -80]);
@@ -131,6 +140,20 @@ export function LandingPage() {
 
   return (
     <div style={{ background: "#06091a", color: "#faf3e0", minHeight: "100vh", overflowX: "hidden" }}>
+      {/* Ambient layers — fixed, covers full page */}
+      <AuroraBackground />
+      <ParticleStarfield />
+      <FloatingElements />
+
+      {/* 3D scene — covers full page, not just hero */}
+      {!isMobile && (
+        <Suspense fallback={null}>
+          <div style={{ position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none" }}>
+            <LandingHeroScene />
+          </div>
+        </Suspense>
+      )}
+
       {/* Grain overlay */}
       <canvas
         ref={canvasRef}
@@ -167,8 +190,11 @@ export function LandingPage() {
           </span>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
-          <button
+          <motion.button
             onClick={() => navigate("/join")}
+            whileHover={{ scale: 1.08, boxShadow: "0 0 20px rgba(245,200,66,0.3)" }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
             style={{
               padding: "8px 20px", borderRadius: 8,
               border: "1px solid rgba(245,200,66,0.4)",
@@ -176,28 +202,26 @@ export function LandingPage() {
               color: "#f5c842", fontWeight: 600, fontSize: 13,
               letterSpacing: "0.05em", cursor: "pointer",
               fontFamily: "'Poppins', sans-serif",
-              transition: "all 0.2s",
             }}
-            onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = "rgba(245,200,66,0.18)"; }}
-            onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = "rgba(245,200,66,0.08)"; }}
           >
             Join Game
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             onClick={() => navigate("/login")}
+            whileHover={{ scale: 1.08, boxShadow: "0 0 25px rgba(245,200,66,0.4)" }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
             style={{
               padding: "8px 20px", borderRadius: 8,
               background: "#f5c842",
               color: "#06091a", fontWeight: 700, fontSize: 13,
               letterSpacing: "0.05em", cursor: "pointer",
               fontFamily: "'Poppins', sans-serif",
-              border: "none", transition: "all 0.2s",
+              border: "none",
             }}
-            onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = "#ffd700"; }}
-            onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = "#f5c842"; }}
           >
             Host a Quiz
-          </button>
+          </motion.button>
         </div>
       </motion.nav>
 
@@ -217,57 +241,62 @@ export function LandingPage() {
           pointerEvents: "none",
         }} />
 
-        {/* Stars */}
-        {STARS.map(s => (
-          <motion.div
-            key={s.id}
-            style={{
-              position: "absolute",
-              left: `${s.x}%`,
-              top: `${s.y}%`,
-              width: s.size,
-              height: s.size,
-              borderRadius: "50%",
-              background: s.id % 11 === 0 ? "#f5c842" : "white",
-              pointerEvents: "none",
-            }}
-            animate={{ opacity: [0.2, 1, 0.2] }}
-            transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, ease: "easeInOut" }}
-          />
-        ))}
+        {/* 2D decorative elements (mobile only) */}
+        {isMobile && (
+          <>
+            {/* Stars */}
+            {STARS.map(s => (
+              <motion.div
+                key={s.id}
+                style={{
+                  position: "absolute",
+                  left: `${s.x}%`,
+                  top: `${s.y}%`,
+                  width: s.size,
+                  height: s.size,
+                  borderRadius: "50%",
+                  background: s.id % 11 === 0 ? "#f5c842" : "white",
+                  pointerEvents: "none",
+                }}
+                animate={{ opacity: [0.2, 1, 0.2] }}
+                transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, ease: "easeInOut" }}
+              />
+            ))}
 
-        {/* Moon */}
-        <motion.div
-          style={{ position: "absolute", top: "8%", right: "12%", y: moonY, opacity: moonOpacity }}
-        >
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
-          >
-            <CrescentMoon className="w-36 h-36 sm:w-48 sm:h-48" />
-          </motion.div>
-        </motion.div>
+            {/* Moon */}
+            <motion.div
+              style={{ position: "absolute", top: "8%", right: "12%", y: moonY, opacity: moonOpacity }}
+            >
+              <motion.div
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
+              >
+                <CrescentMoon className="w-36 h-36 sm:w-48 sm:h-48" />
+              </motion.div>
+            </motion.div>
 
-        {/* Lanterns */}
-        <motion.div style={{ position: "absolute", top: "15%", left: "6%", opacity: 0.7 }}
-          initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.7 }} transition={{ delay: 0.8, duration: 1 }}>
-          <motion.div animate={{ rotate: [-3, 3, -3] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
-            <Lantern className="w-10 h-16" />
-          </motion.div>
-        </motion.div>
-        <motion.div style={{ position: "absolute", top: "10%", left: "16%", opacity: 0.5 }}
-          initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.5 }} transition={{ delay: 1, duration: 1 }}>
-          <motion.div animate={{ rotate: [3, -3, 3] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
-            <Lantern className="w-7 h-12" glowColor="#ff6b35" />
-          </motion.div>
-        </motion.div>
-        <motion.div style={{ position: "absolute", top: "20%", right: "6%", opacity: 0.5 }}
-          initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.5 }} transition={{ delay: 1.2, duration: 1 }}>
-          <motion.div animate={{ rotate: [2, -4, 2] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}>
-            <Lantern className="w-8 h-14" glowColor="#ff6b35" />
-          </motion.div>
-        </motion.div>
+            {/* Lanterns */}
+            <motion.div style={{ position: "absolute", top: "15%", left: "6%", opacity: 0.7 }}
+              initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.7 }} transition={{ delay: 0.8, duration: 1 }}>
+              <motion.div animate={{ rotate: [-3, 3, -3] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+                <Lantern className="w-10 h-16" />
+              </motion.div>
+            </motion.div>
+            <motion.div style={{ position: "absolute", top: "10%", left: "16%", opacity: 0.5 }}
+              initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.5 }} transition={{ delay: 1, duration: 1 }}>
+              <motion.div animate={{ rotate: [3, -3, 3] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
+                <Lantern className="w-7 h-12" glowColor="#ff6b35" />
+              </motion.div>
+            </motion.div>
+            <motion.div style={{ position: "absolute", top: "20%", right: "6%", opacity: 0.5 }}
+              initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 0.5 }} transition={{ delay: 1.2, duration: 1 }}>
+              <motion.div animate={{ rotate: [2, -4, 2] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}>
+                <Lantern className="w-8 h-14" glowColor="#ff6b35" />
+              </motion.div>
+            </motion.div>
+          </>
+        )}
 
         {/* Ornament row above headline */}
         <motion.div
@@ -281,7 +310,7 @@ export function LandingPage() {
             color: "#f5c842", textTransform: "uppercase",
             fontFamily: "'Poppins', sans-serif",
           }}>
-            Ramadan 2026
+            Live Quiz Platform
           </span>
           <StarOrnament size={16} opacity={0.7} />
         </motion.div>
@@ -289,9 +318,9 @@ export function LandingPage() {
         {/* Headline */}
         <div style={{ position: "relative", zIndex: 2, textAlign: "center", maxWidth: 780 }}>
           <motion.h1
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 40, scale: 0.9, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            transition={{ delay: 0.5, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             style={{
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 900,
@@ -300,23 +329,34 @@ export function LandingPage() {
               letterSpacing: "-0.02em",
               color: "#faf3e0",
               marginBottom: 0,
+              textShadow: "0 0 40px rgba(250,243,224,0.15), 0 4px 20px rgba(0,0,0,0.5), 0 8px 40px rgba(0,0,0,0.3)",
             }}
           >
-            CELEBRATE
-            <br />
-            <span style={{
-              WebkitTextStroke: "2px #f5c842",
-              color: "transparent",
-              display: "block",
-            }}>
-              RAMADAN.
-            </span>
+            <motion.span
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              style={{ display: "block" }}
+            >
+              GATHER.
+            </motion.span>
+            <motion.span
+              animate={{ y: [0, -3, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              style={{
+                WebkitTextStroke: "2px #f5c842",
+                color: "transparent",
+                display: "block",
+                filter: "drop-shadow(0 0 20px rgba(245,200,66,0.3))",
+              }}
+            >
+              PLAY.
+            </motion.span>
           </motion.h1>
 
           <motion.h2
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 40, scale: 0.9, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            transition={{ delay: 0.65, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             style={{
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 900,
@@ -325,10 +365,17 @@ export function LandingPage() {
               letterSpacing: "-0.02em",
               color: "#f5c842",
               marginTop: 8,
+              textShadow: "0 0 60px rgba(245,200,66,0.3), 0 4px 20px rgba(0,0,0,0.5)",
             }}
           >
-            QUIZ YOUR
-            <br />WORLD.
+            <motion.span
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+              style={{ display: "block" }}
+            >
+              QUIZ YOUR
+              <br />WORLD.
+            </motion.span>
           </motion.h2>
 
           <motion.p
@@ -346,7 +393,7 @@ export function LandingPage() {
               margin: "28px auto 0",
             }}
           >
-            A live multiplayer quiz game built for Ramadan nights.
+            A live multiplayer quiz game for your community.
             Challenge friends, test your knowledge, and compete in real time.
           </motion.p>
 
@@ -357,8 +404,11 @@ export function LandingPage() {
             transition={{ delay: 1.2, duration: 0.7 }}
             style={{ marginTop: 44, display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}
           >
-            <button
+            <motion.button
               onClick={() => navigate("/join")}
+              whileHover={{ scale: 1.05, y: -3, boxShadow: "0 0 60px rgba(245,200,66,0.6), 0 14px 40px rgba(0,0,0,0.5)" }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
               style={{
                 padding: "16px 36px", borderRadius: 12,
                 background: "#f5c842",
@@ -366,24 +416,16 @@ export function LandingPage() {
                 letterSpacing: "0.06em", cursor: "pointer",
                 fontFamily: "'Poppins', sans-serif", border: "none",
                 boxShadow: "0 0 40px rgba(245,200,66,0.35), 0 8px 24px rgba(0,0,0,0.4)",
-                transition: "all 0.2s",
                 textTransform: "uppercase",
-              }}
-              onMouseEnter={e => {
-                const b = e.currentTarget;
-                b.style.transform = "translateY(-2px)";
-                b.style.boxShadow = "0 0 60px rgba(245,200,66,0.5), 0 12px 32px rgba(0,0,0,0.5)";
-              }}
-              onMouseLeave={e => {
-                const b = e.currentTarget;
-                b.style.transform = "translateY(0)";
-                b.style.boxShadow = "0 0 40px rgba(245,200,66,0.35), 0 8px 24px rgba(0,0,0,0.4)";
               }}
             >
               Join a Game
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={() => navigate("/login")}
+              whileHover={{ scale: 1.05, y: -3, borderColor: "rgba(245,200,66,0.6)", color: "#f5c842", boxShadow: "0 0 30px rgba(245,200,66,0.15)" }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
               style={{
                 padding: "16px 36px", borderRadius: 12,
                 background: "transparent",
@@ -391,8 +433,8 @@ export function LandingPage() {
                 letterSpacing: "0.06em", cursor: "pointer",
                 fontFamily: "'Poppins', sans-serif",
                 border: "1.5px solid rgba(250,243,224,0.25)",
-                transition: "all 0.2s",
                 textTransform: "uppercase",
+                boxShadow: "none",
               }}
               onMouseEnter={e => {
                 const b = e.currentTarget;
@@ -406,7 +448,7 @@ export function LandingPage() {
               }}
             >
               Host a Quiz
-            </button>
+            </motion.button>
           </motion.div>
         </div>
 
@@ -433,33 +475,40 @@ export function LandingPage() {
         <GeoDivider />
 
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 30, scale: 0.95, filter: "blur(6px)" }}
+          whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.7 }}
+          transition={{ duration: 0.8 }}
           style={{ textAlign: "center", margin: "52px 0 56px" }}
         >
-          <p style={{
-            fontSize: 11, letterSpacing: "0.3em", fontWeight: 600,
-            color: "#f5c842", textTransform: "uppercase",
-            fontFamily: "'Poppins', sans-serif", marginBottom: 16,
-          }}>
+          <motion.p
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            style={{
+              fontSize: 11, letterSpacing: "0.3em", fontWeight: 600,
+              color: "#f5c842", textTransform: "uppercase",
+              fontFamily: "'Poppins', sans-serif", marginBottom: 16,
+              textShadow: "0 0 20px rgba(245,200,66,0.4)",
+            }}
+          >
             Why Hilal
-          </p>
+          </motion.p>
           <h2 style={{
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 800, fontSize: "clamp(2rem, 5vw, 3.5rem)",
             color: "#faf3e0", letterSpacing: "-0.02em", lineHeight: 1.1,
+            textShadow: "0 0 30px rgba(250,243,224,0.1), 0 4px 15px rgba(0,0,0,0.4)",
           }}>
             Everything Kahoot charges for.<br />
-            <span style={{ color: "#f5c842" }}>Free. Forever.</span>
+            <span style={{ color: "#f5c842", textShadow: "0 0 40px rgba(245,200,66,0.3)" }}>Free. Forever.</span>
           </h2>
         </motion.div>
 
         {/* Kahoot comparison hero card */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 24, scale: 0.96, filter: "blur(4px)" }}
+          whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+          whileHover={{ scale: 1.01, boxShadow: "0 20px 60px rgba(245,200,66,0.08)" }}
           viewport={{ once: true, margin: "-60px" }}
           transition={{ duration: 0.7 }}
           style={{
@@ -469,6 +518,8 @@ export function LandingPage() {
             border: "1px solid rgba(245,200,66,0.15)",
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
           }}
         >
           {/* Kahoot column */}
@@ -487,7 +538,7 @@ export function LandingPage() {
             {[
               "Up to 10 players free",
               "Paid plan for more players",
-              "No Ramadan theme",
+              "No Islamic design",
               "Generic quiz experience",
               "AI quiz generation — paid only",
             ].map((item) => (
@@ -527,7 +578,7 @@ export function LandingPage() {
             {[
               "Unlimited players, always free",
               "No account needed to play",
-              "Built for Ramadan",
+              "Built for the Ummah",
               "Real-time, speed-scored competition",
               "AI-powered quiz generation — free",
             ].map((item) => (
@@ -556,9 +607,9 @@ export function LandingPage() {
               body: "WebSocket-powered. Every answer, score update, and reveal happens instantly across all connected players.",
             },
             {
-              label: "Ramadan-Themed",
-              title: "Designed for the occasion",
-              body: "Prayer arc transitions, crescent moon motifs, and golden design tokens — built with intention, not as an afterthought.",
+              label: "Islamic Design",
+              title: "Designed with intention",
+              body: "Prayer arc transitions, crescent moon motifs, and golden design tokens — crafted for the community, not as an afterthought.",
             },
             {
               label: "Speed Scoring",
@@ -575,11 +626,13 @@ export function LandingPage() {
               key={f.label}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.03, y: -4, boxShadow: "0 8px 30px rgba(245,200,66,0.1)" }}
               viewport={{ once: true, margin: "-40px" }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
               style={{
                 padding: "32px 28px",
                 background: "rgba(6,9,26,0.95)",
+                cursor: "default",
               }}
             >
               <span style={{
@@ -622,23 +675,29 @@ export function LandingPage() {
           <GeoDivider />
 
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 30, scale: 0.95, filter: "blur(6px)" }}
+            whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
             viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.7 }}
+            transition={{ duration: 0.8 }}
             style={{ textAlign: "center", margin: "52px 0 64px" }}
           >
-            <p style={{
-              fontSize: 11, letterSpacing: "0.3em", fontWeight: 600,
-              color: "#f5c842", textTransform: "uppercase",
-              fontFamily: "'Poppins', sans-serif", marginBottom: 16,
-            }}>
+            <motion.p
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                fontSize: 11, letterSpacing: "0.3em", fontWeight: 600,
+                color: "#f5c842", textTransform: "uppercase",
+                fontFamily: "'Poppins', sans-serif", marginBottom: 16,
+                textShadow: "0 0 20px rgba(245,200,66,0.4)",
+              }}
+            >
               How it works
-            </p>
+            </motion.p>
             <h2 style={{
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 800, fontSize: "clamp(2rem, 5vw, 3.5rem)",
               color: "#faf3e0", letterSpacing: "-0.02em", lineHeight: 1.1,
+              textShadow: "0 0 30px rgba(250,243,224,0.1), 0 4px 15px rgba(0,0,0,0.4)",
             }}>
               Three steps to quiz night.
             </h2>
@@ -661,7 +720,7 @@ export function LandingPage() {
               {
                 n: "03",
                 title: "Play, compete, celebrate",
-                body: "Questions appear in real time. The prayer arc counts you in. Scores update live. Crown your Ramadan champion.",
+                body: "Questions appear in real time. The prayer arc counts you in. Scores update live. Crown your champion.",
                 side: "left",
               },
             ].map((step, i) => (
@@ -669,6 +728,7 @@ export function LandingPage() {
                 key={step.n}
                 initial={{ opacity: 0, x: step.side === "left" ? -30 : 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
+                whileHover={{ scale: 1.02, x: step.side === "left" ? 8 : -8 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.7, delay: 0.1 }}
                 style={{
@@ -727,14 +787,20 @@ export function LandingPage() {
         }} />
 
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 40, scale: 0.9, filter: "blur(8px)" }}
+          whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
-            <CrescentMoon className="w-20 h-20" />
-          </div>
+          <motion.div
+            animate={{ y: [0, -8, 0], rotate: [0, 3, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}
+          >
+            <div style={{ filter: "drop-shadow(0 0 20px rgba(245,200,66,0.5))" }}>
+              <CrescentMoon className="w-20 h-20" />
+            </div>
+          </motion.div>
 
           <h2 style={{
             fontFamily: "'Poppins', sans-serif",
@@ -744,6 +810,7 @@ export function LandingPage() {
             letterSpacing: "-0.03em",
             lineHeight: 1.05,
             marginBottom: 20,
+            textShadow: "0 0 40px rgba(250,243,224,0.15), 0 4px 20px rgba(0,0,0,0.5)",
           }}>
             Ready to play?
           </h2>
@@ -753,11 +820,14 @@ export function LandingPage() {
             fontSize: 16, color: "rgba(250,243,224,0.5)",
             lineHeight: 1.7, maxWidth: 440, margin: "0 auto 44px",
           }}>
-            Ramadan Mubarak. Enter a game code to join your host's session.
+            Assalamu Alaikum. Enter a game code to join your host's session.
           </p>
 
-          <button
+          <motion.button
             onClick={() => navigate("/join")}
+            whileHover={{ scale: 1.06, y: -4, boxShadow: "0 0 80px rgba(245,200,66,0.6), 0 16px 48px rgba(0,0,0,0.6)" }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
             style={{
               padding: "18px 52px", borderRadius: 14,
               background: "#f5c842",
@@ -766,21 +836,10 @@ export function LandingPage() {
               fontFamily: "'Poppins', sans-serif", border: "none",
               boxShadow: "0 0 60px rgba(245,200,66,0.4), 0 12px 40px rgba(0,0,0,0.5)",
               textTransform: "uppercase",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={e => {
-              const b = e.currentTarget;
-              b.style.transform = "translateY(-3px) scale(1.02)";
-              b.style.boxShadow = "0 0 80px rgba(245,200,66,0.6), 0 16px 48px rgba(0,0,0,0.6)";
-            }}
-            onMouseLeave={e => {
-              const b = e.currentTarget;
-              b.style.transform = "translateY(0) scale(1)";
-              b.style.boxShadow = "0 0 60px rgba(245,200,66,0.4), 0 12px 40px rgba(0,0,0,0.5)";
             }}
           >
             Join a Game
-          </button>
+          </motion.button>
         </motion.div>
 
         {/* Footer line */}

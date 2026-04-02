@@ -6,7 +6,12 @@ import { Check, X, Send, GripVertical } from "lucide-react";
 import { CrescentIcon } from "../components/icons";
 import { LeaderboardDisplay } from "../components/LeaderboardDisplay";
 import { PodiumScreen } from "../components/PodiumScreen";
+import { AuroraBackground } from "../components/AuroraBackground";
+import { ParticleStarfield } from "../components/ParticleStarfield";
+import { FloatingElements } from "../components/FloatingElements";
+import { TiltCard } from "../components/TiltCard";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { useGameIntensity } from "../hooks/useGameIntensity";
 import { getPlayerResults } from "../api/sessions";
 import type { WsMessage, QuestionPayload, AnswerRevealPayload, LeaderboardEntry, PodiumEntry } from "../types";
 
@@ -86,6 +91,11 @@ export function PlayerGamePage() {
   // Multi-select question state
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [multiSelectSubmitted, setMultiSelectSubmitted] = useState(false);
+
+  const intensity = useGameIntensity(
+    currentQuestion?.question_index,
+    currentQuestion?.total_questions,
+  );
 
   const { data: playerResults } = useQuery({
     queryKey: ["playerResults", sessionId, playerId],
@@ -178,7 +188,7 @@ export function PlayerGamePage() {
   if (phase === "ended") {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex items-center justify-center px-6">
           <motion.div className="text-center w-full max-w-sm p-8 rounded-3xl"
             style={{ background: "linear-gradient(135deg, rgba(42,20,66,0.9) 0%, rgba(30,15,50,0.95) 100%)", boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,200,66,0.2)" }}
@@ -201,7 +211,7 @@ export function PlayerGamePage() {
   if (phase === "waiting") {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center">
             <motion.div animate={{ y: [0, -15, 0], rotate: [-3, 3, -3] }}
@@ -231,7 +241,22 @@ export function PlayerGamePage() {
   if (phase === "leaderboard") {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
+        <AuroraBackground />
+        <ParticleStarfield speed={intensity.particleSpeed} countMultiplier={intensity.particleMultiplier} />
+        <FloatingElements density={intensity.floatingDensity} />
+        {intensity.showEdgeGlow && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              pointerEvents: "none",
+              zIndex: 1,
+              boxShadow: "inset 0 0 80px 20px rgba(245,200,66,0.08)",
+            }}
+            aria-hidden="true"
+          />
+        )}
         <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
           <motion.div className="text-center mb-8" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex items-center justify-center gap-3 mb-2">
@@ -265,7 +290,22 @@ export function PlayerGamePage() {
 
       return (
         <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-          <div className="ramadan-pattern" />
+          <div className="hilal-pattern" />
+          <AuroraBackground />
+          <ParticleStarfield speed={intensity.particleSpeed} countMultiplier={intensity.particleMultiplier} />
+          <FloatingElements density={intensity.floatingDensity} />
+          {intensity.showEdgeGlow && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                pointerEvents: "none",
+                zIndex: 1,
+                boxShadow: "inset 0 0 80px 20px rgba(245,200,66,0.08)",
+              }}
+              aria-hidden="true"
+            />
+          )}
           <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
             <motion.h3 className="text-lg font-bold text-white mb-4 text-center"
               initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
@@ -329,20 +369,40 @@ export function PlayerGamePage() {
     const correctIds = revealPayload.correct_option_ids ?? (revealPayload.correct_option_id ? [revealPayload.correct_option_id] : []);
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
+        <AuroraBackground />
+        <ParticleStarfield speed={intensity.particleSpeed} countMultiplier={intensity.particleMultiplier} />
+        <FloatingElements density={intensity.floatingDensity} />
+        {intensity.showEdgeGlow && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              pointerEvents: "none",
+              zIndex: 1,
+              boxShadow: "inset 0 0 80px 20px rgba(245,200,66,0.08)",
+            }}
+            aria-hidden="true"
+          />
+        )}
         <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
           {/* Answer tiles */}
           <div className="grid grid-cols-1 gap-4 mb-6">
             {opts.map((opt, i) => {
               const isCorrectOpt = correctIds.includes(opt.id);
               const wasSelected = isMultiSelect ? selectedOptionIds.includes(opt.id) : opt.id === selectedOptionId;
+              const isWrongSelected = !isCorrectOpt && wasSelected;
               const color = OPTION_COLORS[i % 4];
-              return (
+              const tile = (
                 <motion.div key={opt.id}
                   className="relative p-5 rounded-2xl overflow-hidden"
                   style={{
                     background: isCorrectOpt ? `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)` : wasSelected ? "rgba(244,67,54,0.25)" : "rgba(255,255,255,0.08)",
-                    boxShadow: isCorrectOpt ? `0 8px 30px ${color}60, 0 0 0 3px ${color}` : "none",
+                    boxShadow: isCorrectOpt && wasSelected
+                      ? `0 8px 30px ${color}60, 0 0 0 3px ${color}, 0 0 30px rgba(245,200,66,0.5)`
+                      : isCorrectOpt
+                        ? `0 8px 30px ${color}60, 0 0 0 3px ${color}`
+                        : "none",
                     opacity: !isCorrectOpt && !wasSelected ? 0.4 : 1,
                   }}
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -364,7 +424,7 @@ export function PlayerGamePage() {
                         <Check className="w-6 h-6 text-white" strokeWidth={3} />
                       </motion.div>
                     )}
-                    {!isCorrectOpt && wasSelected && (
+                    {isWrongSelected && (
                       <motion.div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-red-500/30"
                         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4, type: "spring", stiffness: 200 }}>
                         <X className="w-6 h-6 text-red-400" strokeWidth={3} />
@@ -373,6 +433,15 @@ export function PlayerGamePage() {
                   </div>
                 </motion.div>
               );
+              return isWrongSelected ? (
+                <motion.div key={opt.id}
+                  animate={{
+                    x: [0, -intensity.wrongShakeAmplitude, intensity.wrongShakeAmplitude, -intensity.wrongShakeAmplitude, 0],
+                  }}
+                  transition={{ duration: 0.3, delay: 0.2 }}>
+                  {tile}
+                </motion.div>
+              ) : tile;
             })}
           </div>
 
@@ -413,7 +482,22 @@ export function PlayerGamePage() {
 
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
-        <div className="ramadan-pattern" />
+        <div className="hilal-pattern" />
+        <AuroraBackground />
+        <ParticleStarfield speed={intensity.particleSpeed} countMultiplier={intensity.particleMultiplier} />
+        <FloatingElements density={intensity.floatingDensity} />
+        {intensity.showEdgeGlow && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              pointerEvents: "none",
+              zIndex: 1,
+              boxShadow: "inset 0 0 80px 20px rgba(245,200,66,0.08)",
+            }}
+            aria-hidden="true"
+          />
+        )}
 
         <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
           {/* Timer */}
@@ -654,32 +738,34 @@ export function PlayerGamePage() {
               {opts.map((opt, i) => {
                 const color = OPTION_COLORS[i % 4];
                 return (
-                  <motion.button key={opt.id}
-                    onClick={() => handleSelectOption(opt.id, q.id)}
-                    className="relative px-4 py-3 rounded-2xl text-left overflow-hidden group"
-                    style={{
-                      background: `linear-gradient(135deg, ${color}dd 0%, ${color}bb 100%)`,
-                      boxShadow: `0 4px 15px ${color}40`,
-                    }}
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 + i * 0.08 }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}>
-                    {/* Shine on hover */}
-                    <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20"
-                      initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.6 }} />
-                    <div className="relative z-10 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0"
-                        style={{ background: "rgba(255,255,255,0.25)", color: "white" }}>
-                        {String.fromCharCode(65 + i)}
+                  <TiltCard key={opt.id}>
+                    <motion.button
+                      onClick={() => handleSelectOption(opt.id, q.id)}
+                      className="relative px-4 py-3 rounded-2xl text-left overflow-hidden group w-full"
+                      style={{
+                        background: `linear-gradient(135deg, ${color}dd 0%, ${color}bb 100%)`,
+                        boxShadow: `0 4px 15px ${color}40`,
+                      }}
+                      initial={{ opacity: 0, x: -30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 + i * 0.08 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}>
+                      {/* Shine on hover */}
+                      <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20"
+                        initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.6 }} />
+                      <div className="relative z-10 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0"
+                          style={{ background: "rgba(255,255,255,0.25)", color: "white" }}>
+                          {String.fromCharCode(65 + i)}
+                        </div>
+                        {opt.image_url && (
+                          <img src={opt.image_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                        )}
+                        <p className="text-white font-medium leading-tight">{opt.text}</p>
                       </div>
-                      {opt.image_url && (
-                        <img src={opt.image_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                      )}
-                      <p className="text-white font-medium leading-tight">{opt.text}</p>
-                    </div>
-                  </motion.button>
+                    </motion.button>
+                  </TiltCard>
                 );
               })}
             </div>
