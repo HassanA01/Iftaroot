@@ -48,16 +48,16 @@ export function IslamicLattice() {
 
   return (
     <Float speed={0.5} rotationIntensity={0.1} floatIntensity={0.3}>
-      <group ref={groupRef} position={[0, 0, -1.5]}>
+      <group ref={groupRef} position={[0, 0, -2.5]} scale={[0.5, 0.5, 0.5]}>
         {diamonds.map((d, i) => (
           <mesh key={i} position={[d.x, d.y, 0]}>
             <DiamondGeometry />
             <meshStandardMaterial
               color="#f5c842"
               emissive="#f5c842"
-              emissiveIntensity={0.15}
+              emissiveIntensity={0.1}
               transparent
-              opacity={0.25}
+              opacity={0.12}
               metalness={0.6}
               roughness={0.3}
               side={THREE.DoubleSide}

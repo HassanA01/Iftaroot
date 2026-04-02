@@ -95,15 +95,17 @@ export function CrescentMoon3D() {
 
   return (
     <Float speed={0.8} rotationIntensity={0} floatIntensity={0.4}>
-      <group ref={groupRef} position={[0, 0.3, 0]}>
+      <group ref={groupRef} position={[0, 0.3, 0]} scale={[0.6, 0.6, 0.6]}>
         <mesh rotation={[0, 0, Math.PI * 0.1]}>
           <CrescentGeometry />
           <meshStandardMaterial
             color="#f5c842"
             emissive="#f5c842"
-            emissiveIntensity={0.3}
+            emissiveIntensity={0.2}
             metalness={0.7}
             roughness={0.2}
+            transparent
+            opacity={0.7}
           />
         </mesh>
 
