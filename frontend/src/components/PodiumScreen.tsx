@@ -4,6 +4,10 @@ import confetti from "canvas-confetti";
 import { Trophy, Sparkles } from "lucide-react";
 import { LanternIcon, CrescentIcon } from "./icons";
 import type { PodiumEntry, PlayerResults } from "../types";
+import { AuroraBackground } from "./AuroraBackground";
+import { ParticleStarfield } from "./ParticleStarfield";
+import { FloatingElements } from "./FloatingElements";
+import { TiltCard } from "./TiltCard";
 
 interface Props {
   entries: PodiumEntry[];
@@ -192,6 +196,9 @@ export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Das
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
+      <AuroraBackground />
+      <ParticleStarfield speed={3.3} countMultiplier={2} />
+      <FloatingElements density="dense" />
       <div className="hilal-pattern" />
 
       <div className="relative z-10 min-h-screen flex flex-col px-6 py-8 max-w-md mx-auto">
@@ -229,9 +236,40 @@ export function PodiumScreen({ entries, playerId, onEnd, endLabel = "Back to Das
               const ranks = [2, 1, 3];
               const heights = [120, 150, 100];
               const delays = [0.6, 0.5, 0.7];
+              const rank = ranks[slot];
+              // Stagger delays per rank: 3rd=0.5, 2nd=1.0, 1st=1.5
+              const staggerDelay = rank === 1 ? 1.5 : rank === 2 ? 1.0 : 0.5;
               return (
-                <PodiumBlock key={entry.player_id} entry={entry} rank={ranks[slot]}
-                  height={heights[slot]} isSelf={entry.player_id === playerId} delay={delays[slot]} />
+                <motion.div
+                  key={entry.player_id}
+                  initial={{ opacity: 0, scale: 0.8, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                  transition={{ delay: staggerDelay, duration: 0.6, ease: "easeOut" }}
+                >
+                  {rank === 1 ? (
+                    <motion.div
+                      animate={{
+                        boxShadow: [
+                          "0 0 20px rgba(245,200,66,0.3)",
+                          "0 0 40px rgba(245,200,66,0.5)",
+                          "0 0 20px rgba(245,200,66,0.3)",
+                        ],
+                      }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      style={{ borderRadius: "1rem" }}
+                    >
+                      <TiltCard>
+                        <PodiumBlock entry={entry} rank={rank}
+                          height={heights[slot]} isSelf={entry.player_id === playerId} delay={delays[slot]} />
+                      </TiltCard>
+                    </motion.div>
+                  ) : (
+                    <TiltCard>
+                      <PodiumBlock entry={entry} rank={rank}
+                        height={heights[slot]} isSelf={entry.player_id === playerId} delay={delays[slot]} />
+                    </TiltCard>
+                  )}
+                </motion.div>
               );
             })}
           </motion.div>

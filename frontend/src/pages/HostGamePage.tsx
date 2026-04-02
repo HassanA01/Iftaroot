@@ -11,6 +11,10 @@ import { PodiumScreen } from "../components/PodiumScreen";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { PrayerArcTransition } from "../components/PrayerArcTransition";
 import { useGameAudio } from "../hooks/useGameAudio";
+import { AuroraBackground } from "../components/AuroraBackground";
+import { ParticleStarfield } from "../components/ParticleStarfield";
+import { FloatingElements } from "../components/FloatingElements";
+import { useGameIntensity } from "../hooks/useGameIntensity";
 import type { WsMessage, LeaderboardEntry, PodiumEntry, AnswerRevealPayload } from "../types";
 
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:8081";
@@ -155,6 +159,10 @@ export function HostGamePage() {
   const [timeLimit, setTimeLimit] = useState(20);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const { muted, toggleMute } = useGameAudio(phase);
+  const intensity = useGameIntensity(
+    currentQuestion?.question_index,
+    currentQuestion?.total_questions,
+  );
 
   useEffect(() => {
     if (phase !== "question" || timeLeft <= 0) return;
@@ -261,6 +269,21 @@ export function HostGamePage() {
     return (
       <div className="min-h-screen w-full relative overflow-hidden" style={{ background: "#1a0a2e" }}>
         <div className="hilal-pattern" />
+        <AuroraBackground />
+        <ParticleStarfield speed={intensity.particleSpeed} countMultiplier={intensity.particleMultiplier} />
+        <FloatingElements density={intensity.floatingDensity} />
+        {intensity.showEdgeGlow && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              pointerEvents: "none",
+              zIndex: 1,
+              boxShadow: "inset 0 0 80px 20px rgba(245,200,66,0.08)",
+            }}
+            aria-hidden="true"
+          />
+        )}
         <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-8">
           <div className="w-full max-w-lg space-y-6">
             <motion.h2 className="text-2xl font-black text-center" style={{ color: "#f5c842" }}
@@ -292,6 +315,21 @@ export function HostGamePage() {
   return (
     <div className="min-h-screen w-full relative overflow-hidden flex flex-col" style={{ background: "#1a0a2e" }}>
       <div className="hilal-pattern" />
+      <AuroraBackground />
+      <ParticleStarfield speed={intensity.particleSpeed} countMultiplier={intensity.particleMultiplier} />
+      <FloatingElements density={intensity.floatingDensity} />
+      {intensity.showEdgeGlow && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 1,
+            boxShadow: "inset 0 0 80px 20px rgba(245,200,66,0.08)",
+          }}
+          aria-hidden="true"
+        />
+      )}
 
       {showEndConfirm && (
         <ConfirmModal
@@ -382,26 +420,37 @@ export function HostGamePage() {
 
             {/* Timer circle */}
             <div className="flex justify-center mt-8">
-              <div className="relative w-28 h-28">
-                <svg className="w-28 h-28" style={{ transform: "rotate(-90deg)" }} viewBox="0 0 120 120">
-                  <circle cx="60" cy="60" r="54" stroke="rgba(245,200,66,0.15)" strokeWidth="8" fill="none" />
-                  <circle cx="60" cy="60" r="54"
-                    stroke={timeLeft <= 5 ? "#f44336" : "#f5c842"}
-                    strokeWidth="8" fill="none" strokeLinecap="round"
-                    style={{
-                      strokeDasharray: circumference,
-                      strokeDashoffset: dashOffset,
-                      filter: `drop-shadow(0 0 ${timeLeft <= 5 ? "20px rgba(244,67,54,0.8)" : "12px rgba(245,200,66,0.6)"})`,
-                      transition: "stroke-dashoffset 1s linear, stroke 0.3s ease",
-                    }} />
-                </svg>
-                <motion.div className="absolute inset-0 flex items-center justify-center text-4xl font-black"
-                  style={{ color: timeLeft <= 5 ? "#f44336" : "#f5c842" }}
-                  animate={timeLeft <= 5 && timeLeft > 0 ? { scale: [1, 1.15, 1] } : {}}
-                  transition={{ duration: 0.5, repeat: Infinity }}>
-                  {timeLeft}
-                </motion.div>
-              </div>
+              <motion.div
+                animate={intensity.timerPulseScale > 1 ? {
+                  scale: [1, intensity.timerPulseScale, 1],
+                } : {}}
+                transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              >
+                <div className="relative w-28 h-28">
+                  <svg className="w-28 h-28" style={{ transform: "rotate(-90deg)" }} viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="54" stroke="rgba(245,200,66,0.15)" strokeWidth="8" fill="none" />
+                    <circle cx="60" cy="60" r="54"
+                      stroke={timeLeft <= 5 ? "#f44336" : "#f5c842"}
+                      strokeWidth="8" fill="none" strokeLinecap="round"
+                      style={{
+                        strokeDasharray: circumference,
+                        strokeDashoffset: dashOffset,
+                        filter: `drop-shadow(0 0 ${timeLeft <= 5 ? "20px rgba(244,67,54,0.8)" : "12px rgba(245,200,66,0.6)"})`,
+                        transition: "stroke-dashoffset 1s linear, stroke 0.3s ease",
+                      }} />
+                  </svg>
+                  <motion.div className="absolute inset-0 flex items-center justify-center text-4xl font-black"
+                    style={{ color: timeLeft <= 5 ? "#f44336" : "#f5c842" }}
+                    animate={timeLeft <= 5 && timeLeft > 0 ? { scale: [1, 1.15, 1] } : {}}
+                    transition={{ duration: 0.5, repeat: Infinity }}>
+                    {timeLeft}
+                  </motion.div>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
 
