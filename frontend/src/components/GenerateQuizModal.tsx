@@ -22,7 +22,7 @@ function formatFileSize(bytes: number): string {
 export function GenerateQuizModal({ onClose, onGenerated }: Props) {
   const [mode, setMode] = useState<"topic" | "upload">("topic");
   const [topic, setTopic] = useState("");
-  const [count, setCount] = useState(5);
+  const [count, setCount] = useState("5");
   const [context, setContext] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +57,15 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
     color: "white",
   };
 
-  const countInvalid = count < 1 || count > maxQuestions;
+  const parsedCount = parseInt(count, 10);
+  const countInvalid = count === "" || isNaN(parsedCount) || parsedCount < 1 || parsedCount > maxQuestions;
+
+  function handleCountChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    if (val === "" || /^\d+$/.test(val)) {
+      setCount(val);
+    }
+  }
 
   function validateFile(selected: File): boolean {
     setFileError(null);
@@ -110,14 +118,14 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
   async function handleTopicSubmit(e: FormEvent) {
     e.preventDefault();
     if (countInvalid) {
-      setError(`Maximum ${maxQuestions} questions for AI generation.`);
+      setError(`Please enter a number between 1 and ${maxQuestions}.`);
       return;
     }
     setError(null);
     setLoading(true);
     setLoadingStep("Summoning questions from the stars...");
     try {
-      const data = await generateQuiz({ topic: topic.trim(), question_count: count, context: context.trim(), question_types: activeTypes });
+      const data = await generateQuiz({ topic: topic.trim(), question_count: parsedCount, context: context.trim(), question_types: activeTypes });
       onGenerated(data);
     } catch (err: unknown) {
       handleError(err);
@@ -130,7 +138,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
   async function handleUploadSubmit(e: FormEvent) {
     e.preventDefault();
     if (!file) { setError("Please select a file."); return; }
-    if (countInvalid) { setError(`Maximum ${maxQuestions} questions for AI generation.`); return; }
+    if (countInvalid) { setError(`Please enter a number between 1 and ${maxQuestions}.`); return; }
     setError(null);
     setLoading(true);
     setLoadingStep("Extracting text from document...");
@@ -138,7 +146,7 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
     const timer = setTimeout(() => setLoadingStep("Generating questions..."), 3000);
 
     try {
-      const data = await generateQuizFromUpload(file, count, activeTypes);
+      const data = await generateQuizFromUpload(file, parsedCount, activeTypes);
       onGenerated(data);
     } catch (err: unknown) {
       handleError(err);
@@ -280,11 +288,13 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
                       Number of questions
                     </label>
                     <input
-                      type="number"
-                      min={1}
-                      max={maxQuestions}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={count}
-                      onChange={(e) => setCount(Number(e.target.value))}
+                      onChange={handleCountChange}
+                      placeholder={`1 - ${maxQuestions}`}
+                      data-testid="count-input"
                       className="w-full rounded-xl px-4 py-3 text-sm outline-none transition"
                       style={{
                         ...inputStyle,
@@ -293,9 +303,9 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
                       onFocus={(e) => (e.target.style.borderColor = countInvalid ? "rgba(244,67,54,0.7)" : "rgba(245,200,66,0.6)")}
                       onBlur={(e) => (e.target.style.borderColor = countInvalid ? "rgba(244,67,54,0.5)" : "rgba(245,200,66,0.2)")}
                     />
-                    {countInvalid && (
+                    {countInvalid && count !== "" && (
                       <p className="text-xs mt-1" style={{ color: "#f44336" }}>
-                        Maximum {maxQuestions} questions for AI generation.
+                        Enter a number between 1 and {maxQuestions}.
                       </p>
                     )}
                   </div>
@@ -327,14 +337,15 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
 
                   <motion.button
                     type="submit"
-                    className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                    disabled={countInvalid || !topic.trim()}
+                    className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{
                       background: "linear-gradient(135deg, #f5c842 0%, #ff6b35 100%)",
                       color: "white",
-                      boxShadow: "0 6px 24px rgba(245,200,66,0.35)",
+                      boxShadow: countInvalid || !topic.trim() ? "none" : "0 6px 24px rgba(245,200,66,0.35)",
                     }}
-                    whileHover={{ scale: 1.02, boxShadow: "0 8px 30px rgba(245,200,66,0.5)" }}
-                    whileTap={{ scale: 0.98 }}>
+                    whileHover={countInvalid || !topic.trim() ? {} : { scale: 1.02, boxShadow: "0 8px 30px rgba(245,200,66,0.5)" }}
+                    whileTap={countInvalid || !topic.trim() ? {} : { scale: 0.98 }}>
                     <Sparkles className="w-4 h-4" />
                     Generate Quiz
                   </motion.button>
@@ -413,11 +424,13 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
                       Number of questions
                     </label>
                     <input
-                      type="number"
-                      min={1}
-                      max={maxQuestions}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={count}
-                      onChange={(e) => setCount(Number(e.target.value))}
+                      onChange={handleCountChange}
+                      placeholder={`1 - ${maxQuestions}`}
+                      data-testid="count-input"
                       className="w-full rounded-xl px-4 py-3 text-sm outline-none transition"
                       style={{
                         ...inputStyle,
@@ -426,9 +439,9 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
                       onFocus={(e) => (e.target.style.borderColor = countInvalid ? "rgba(244,67,54,0.7)" : "rgba(245,200,66,0.6)")}
                       onBlur={(e) => (e.target.style.borderColor = countInvalid ? "rgba(244,67,54,0.5)" : "rgba(245,200,66,0.2)")}
                     />
-                    {countInvalid && (
+                    {countInvalid && count !== "" && (
                       <p className="text-xs mt-1" style={{ color: "#f44336" }}>
-                        Maximum {maxQuestions} questions for AI generation.
+                        Enter a number between 1 and {maxQuestions}.
                       </p>
                     )}
                   </div>
@@ -444,15 +457,15 @@ export function GenerateQuizModal({ onClose, onGenerated }: Props) {
 
                   <motion.button
                     type="submit"
-                    disabled={!file}
+                    disabled={!file || countInvalid}
                     className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{
                       background: "linear-gradient(135deg, #f5c842 0%, #ff6b35 100%)",
                       color: "white",
-                      boxShadow: file ? "0 6px 24px rgba(245,200,66,0.35)" : "none",
+                      boxShadow: file && !countInvalid ? "0 6px 24px rgba(245,200,66,0.35)" : "none",
                     }}
-                    whileHover={file ? { scale: 1.02, boxShadow: "0 8px 30px rgba(245,200,66,0.5)" } : {}}
-                    whileTap={file ? { scale: 0.98 } : {}}>
+                    whileHover={file && !countInvalid ? { scale: 1.02, boxShadow: "0 8px 30px rgba(245,200,66,0.5)" } : {}}
+                    whileTap={file && !countInvalid ? { scale: 0.98 } : {}}>
                     <Upload className="w-4 h-4" />
                     Generate from Document
                   </motion.button>

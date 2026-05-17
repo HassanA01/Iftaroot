@@ -27,38 +27,62 @@ describe("GenerateQuizModal", () => {
     renderWithProviders(<GenerateQuizModal {...defaultProps} />);
     expect(screen.getByText("Generate with AI")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/islamic history/i)).toBeInTheDocument();
-    expect(screen.getByRole("spinbutton")).toBeInTheDocument();
+    expect(screen.getByTestId("count-input")).toBeInTheDocument();
   });
 
-  it("caps question count input at max value from config", async () => {
+  it("count input is a text input with numeric inputMode (no spinner arrows)", () => {
     renderWithProviders(<GenerateQuizModal {...defaultProps} />);
-    // Before config loads, defaults to 20
-    const input = screen.getByRole("spinbutton");
-    expect(input).toHaveAttribute("min", "1");
+    const input = screen.getByTestId("count-input");
+    expect(input).toHaveAttribute("type", "text");
+    expect(input).toHaveAttribute("inputMode", "numeric");
   });
 
   it("shows inline error when question count exceeds limit", async () => {
     renderWithProviders(<GenerateQuizModal {...defaultProps} />);
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByTestId("count-input");
     await userEvent.clear(input);
     await userEvent.type(input, "25");
-    expect(screen.getByText(/Maximum .* questions for AI generation/)).toBeInTheDocument();
+    expect(screen.getByText(/Enter a number between 1 and 20/i)).toBeInTheDocument();
   });
 
   it("does not show inline error when question count is valid", () => {
     renderWithProviders(<GenerateQuizModal {...defaultProps} />);
-    expect(screen.queryByText(/Maximum .* questions for AI generation/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Enter a number between/i)).not.toBeInTheDocument();
+  });
+
+  it("ignores non-digit input so the field never holds a leading zero", async () => {
+    renderWithProviders(<GenerateQuizModal {...defaultProps} />);
+    const input = screen.getByTestId("count-input") as HTMLInputElement;
+    await userEvent.clear(input);
+    expect(input.value).toBe("");
+    await userEvent.type(input, "abc");
+    expect(input.value).toBe("");
+    await userEvent.type(input, "7");
+    expect(input.value).toBe("7");
   });
 
   it("blocks submit when count exceeds limit", async () => {
     const onGenerated = vi.fn();
     renderWithProviders(<GenerateQuizModal onClose={vi.fn()} onGenerated={onGenerated} />);
-    const countInput = screen.getByRole("spinbutton");
+    const countInput = screen.getByTestId("count-input");
     await userEvent.clear(countInput);
     await userEvent.type(countInput, "25");
     const topicInput = screen.getByPlaceholderText(/islamic history/i);
     await userEvent.type(topicInput, "Science");
     fireEvent.submit(screen.getByRole("button", { name: /generate quiz/i }));
+    expect(onGenerated).not.toHaveBeenCalled();
+  });
+
+  it("blocks submit when count is empty", async () => {
+    const onGenerated = vi.fn();
+    renderWithProviders(<GenerateQuizModal onClose={vi.fn()} onGenerated={onGenerated} />);
+    const countInput = screen.getByTestId("count-input");
+    await userEvent.clear(countInput);
+    const topicInput = screen.getByPlaceholderText(/islamic history/i);
+    await userEvent.type(topicInput, "Science");
+    const submitBtn = screen.getByRole("button", { name: /generate quiz/i });
+    expect(submitBtn).toBeDisabled();
+    fireEvent.submit(submitBtn);
     expect(onGenerated).not.toHaveBeenCalled();
   });
 
